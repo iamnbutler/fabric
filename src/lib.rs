@@ -1,5 +1,6 @@
 pub mod archive;
 pub mod cli;
+pub mod concurrency;
 pub mod context;
 pub mod event;
 pub mod id;
