@@ -3,6 +3,7 @@ pub mod cli;
 pub mod context;
 pub mod event;
 pub mod id;
+pub mod shell;
 pub mod state;
 pub mod validation;
 pub mod writer;

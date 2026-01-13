@@ -4,6 +4,7 @@ use clap::Parser;
 use fabric::archive::archive_tasks;
 use fabric::cli::{list_tasks, show_task, Cli, Commands, OutputFormat};
 use fabric::context::{init, FabricContext};
+use fabric::shell::run_shell;
 use fabric::state::rebuild;
 use fabric::validation::validate;
 
@@ -47,6 +48,10 @@ fn main() -> Result<()> {
             let ctx = FabricContext::discover()?;
             validate(&ctx, strict)?;
             Ok(())
+        }
+        Commands::Shell => {
+            let ctx = FabricContext::discover()?;
+            run_shell(ctx)
         }
     }
 }

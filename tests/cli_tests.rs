@@ -201,3 +201,9 @@ fn test_output_format_clone() {
     let cloned = format;
     assert_eq!(format, cloned);
 }
+
+#[test]
+fn test_cli_parse_shell() {
+    let cli = Cli::parse_from(["fabric", "shell"]);
+    assert!(matches!(cli.command, Commands::Shell));
+}

@@ -60,6 +60,8 @@ pub enum Commands {
         #[arg(long)]
         strict: bool,
     },
+    /// Start interactive shell mode
+    Shell,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

@@ -1,0 +1,436 @@
+//! Interactive shell mode for fabric commands
+
+use anyhow::{anyhow, Result};
+use rustyline::completion::{Completer, Pair};
+use rustyline::error::ReadlineError;
+use rustyline::highlight::Highlighter;
+use rustyline::hint::Hinter;
+use rustyline::history::DefaultHistory;
+use rustyline::validate::Validator;
+use rustyline::{Config, Editor, Helper};
+use std::borrow::Cow;
+
+use crate::cli::{list_tasks, show_task, OutputFormat};
+use crate::context::FabricContext;
+use crate::state::load_or_materialize_state;
+use crate::writer::{create_task, get_current_branch, get_current_user};
+
+// =============================================================================
+// Shell Commands
+// =============================================================================
+
+const COMMANDS: &[&str] = &["add", "list", "show", "help", "quit", "exit"];
+
+const HELP_TEXT: &str = r#"
+fabric shell - Interactive mode
+
+Commands:
+  add <title> [-d <description>] [-p <priority>] [-a <assignee>] [-t <tag>...]
+      Create a new task
+
+  list [--status <open|complete|all>] [--assignee <name>] [--tag <tag>] [--priority <p>]
+      List tasks with optional filters
+
+  show <task-id> [--events]
+      Show details of a specific task
+
+  help
+      Show this help message
+
+  quit, exit
+      Exit the shell
+
+Tab completion is available for commands and task IDs.
+Use Up/Down arrows to navigate command history.
+"#;
+
+// =============================================================================
+// Completer
+// =============================================================================
+
+struct FabricCompleter {
+    ctx: FabricContext,
+}
+
+impl FabricCompleter {
+    fn new(ctx: FabricContext) -> Self {
+        Self { ctx }
+    }
+
+    fn get_task_ids(&self) -> Vec<String> {
+        load_or_materialize_state(&self.ctx)
+            .map(|state| state.tasks.keys().cloned().collect())
+            .unwrap_or_default()
+    }
+}
+
+impl Completer for FabricCompleter {
+    type Candidate = Pair;
+
+    fn complete(
+        &self,
+        line: &str,
+        pos: usize,
+        _ctx: &rustyline::Context<'_>,
+    ) -> rustyline::Result<(usize, Vec<Pair>)> {
+        let line_to_cursor = &line[..pos];
+        let words: Vec<&str> = line_to_cursor.split_whitespace().collect();
+
+        // If we're at the start or completing the first word, complete commands
+        if words.is_empty() || (words.len() == 1 && !line_to_cursor.ends_with(' ')) {
+            let prefix = words.first().copied().unwrap_or("");
+            let candidates: Vec<Pair> = COMMANDS
+                .iter()
+                .filter(|cmd| cmd.starts_with(prefix))
+                .map(|cmd| Pair {
+                    display: cmd.to_string(),
+                    replacement: cmd.to_string(),
+                })
+                .collect();
+            let start = line_to_cursor.rfind(' ').map(|i| i + 1).unwrap_or(0);
+            return Ok((start, candidates));
+        }
+
+        // If we're completing after 'show', complete task IDs
+        if words.first() == Some(&"show") && words.len() <= 2 {
+            let prefix = if line_to_cursor.ends_with(' ') {
+                ""
+            } else {
+                words.get(1).copied().unwrap_or("")
+            };
+
+            let task_ids = self.get_task_ids();
+            let candidates: Vec<Pair> = task_ids
+                .iter()
+                .filter(|id| id.starts_with(prefix))
+                .map(|id| Pair {
+                    display: id.clone(),
+                    replacement: id.clone(),
+                })
+                .collect();
+
+            let start = if line_to_cursor.ends_with(' ') {
+                pos
+            } else {
+                line_to_cursor.rfind(' ').map(|i| i + 1).unwrap_or(0)
+            };
+            return Ok((start, candidates));
+        }
+
+        // Complete flags for list command
+        if words.first() == Some(&"list") {
+            let last_word = if line_to_cursor.ends_with(' ') {
+                ""
+            } else {
+                words.last().copied().unwrap_or("")
+            };
+
+            if last_word.starts_with('-') || last_word.is_empty() {
+                let flags = ["--status", "--assignee", "--tag", "--priority", "--format"];
+                let candidates: Vec<Pair> = flags
+                    .iter()
+                    .filter(|f| f.starts_with(last_word))
+                    .map(|f| Pair {
+                        display: f.to_string(),
+                        replacement: f.to_string(),
+                    })
+                    .collect();
+
+                let start = if line_to_cursor.ends_with(' ') {
+                    pos
+                } else {
+                    line_to_cursor.rfind(' ').map(|i| i + 1).unwrap_or(0)
+                };
+                return Ok((start, candidates));
+            }
+
+            // Complete status values
+            let prev_word = if words.len() >= 2 {
+                words.get(words.len() - 2).copied()
+            } else {
+                None
+            };
+
+            if prev_word == Some("--status") || prev_word == Some("-s") {
+                let statuses = ["open", "complete", "all"];
+                let candidates: Vec<Pair> = statuses
+                    .iter()
+                    .filter(|s| s.starts_with(last_word))
+                    .map(|s| Pair {
+                        display: s.to_string(),
+                        replacement: s.to_string(),
+                    })
+                    .collect();
+
+                let start = if line_to_cursor.ends_with(' ') {
+                    pos
+                } else {
+                    line_to_cursor.rfind(' ').map(|i| i + 1).unwrap_or(0)
+                };
+                return Ok((start, candidates));
+            }
+        }
+
+        Ok((pos, vec![]))
+    }
+}
+
+impl Hinter for FabricCompleter {
+    type Hint = String;
+
+    fn hint(&self, _line: &str, _pos: usize, _ctx: &rustyline::Context<'_>) -> Option<String> {
+        None
+    }
+}
+
+impl Highlighter for FabricCompleter {
+    fn highlight_hint<'h>(&self, hint: &'h str) -> Cow<'h, str> {
+        Cow::Borrowed(hint)
+    }
+}
+
+impl Validator for FabricCompleter {}
+
+impl Helper for FabricCompleter {}
+
+// =============================================================================
+// Command Parsing & Execution
+// =============================================================================
+
+fn parse_add_args(args: &[&str]) -> Result<(String, Option<String>, Option<String>, Option<String>, Vec<String>)> {
+    if args.is_empty() {
+        return Err(anyhow!("Usage: add <title> [-d description] [-p priority] [-a assignee] [-t tag...]"));
+    }
+
+    let mut title_parts = Vec::new();
+    let mut description = None;
+    let mut priority = None;
+    let mut assignee = None;
+    let mut tags = Vec::new();
+
+    let mut i = 0;
+    while i < args.len() {
+        match args[i] {
+            "-d" | "--description" => {
+                i += 1;
+                if i < args.len() {
+                    description = Some(args[i].to_string());
+                }
+            }
+            "-p" | "--priority" => {
+                i += 1;
+                if i < args.len() {
+                    priority = Some(args[i].to_string());
+                }
+            }
+            "-a" | "--assignee" => {
+                i += 1;
+                if i < args.len() {
+                    assignee = Some(args[i].to_string());
+                }
+            }
+            "-t" | "--tag" => {
+                i += 1;
+                if i < args.len() {
+                    tags.push(args[i].to_string());
+                }
+            }
+            _ => {
+                if !args[i].starts_with('-') {
+                    title_parts.push(args[i]);
+                }
+            }
+        }
+        i += 1;
+    }
+
+    if title_parts.is_empty() {
+        return Err(anyhow!("Task title is required"));
+    }
+
+    let title = title_parts.join(" ");
+    Ok((title, description, priority, assignee, tags))
+}
+
+fn parse_list_args(args: &[&str]) -> (Option<String>, Option<String>, Option<String>, Option<String>, OutputFormat) {
+    let mut status = Some("open".to_string());
+    let mut assignee = None;
+    let mut tag = None;
+    let mut priority = None;
+    let mut format = OutputFormat::Table;
+
+    let mut i = 0;
+    while i < args.len() {
+        match args[i] {
+            "-s" | "--status" => {
+                i += 1;
+                if i < args.len() {
+                    status = Some(args[i].to_string());
+                }
+            }
+            "-a" | "--assignee" => {
+                i += 1;
+                if i < args.len() {
+                    assignee = Some(args[i].to_string());
+                }
+            }
+            "-t" | "--tag" => {
+                i += 1;
+                if i < args.len() {
+                    tag = Some(args[i].to_string());
+                }
+            }
+            "-p" | "--priority" => {
+                i += 1;
+                if i < args.len() {
+                    priority = Some(args[i].to_string());
+                }
+            }
+            "-f" | "--format" => {
+                i += 1;
+                if i < args.len() {
+                    format = OutputFormat::from_str(args[i]);
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+
+    (status, assignee, tag, priority, format)
+}
+
+fn parse_show_args(args: &[&str]) -> Result<(String, bool)> {
+    if args.is_empty() {
+        return Err(anyhow!("Usage: show <task-id> [--events]"));
+    }
+
+    let id = args[0].to_string();
+    let events = args.contains(&"--events") || args.contains(&"-e");
+
+    Ok((id, events))
+}
+
+fn execute_command(ctx: &FabricContext, line: &str) -> Result<bool> {
+    let parts: Vec<&str> = line.split_whitespace().collect();
+    if parts.is_empty() {
+        return Ok(true); // Continue
+    }
+
+    let cmd = parts[0];
+    let args = &parts[1..];
+
+    match cmd {
+        "help" | "?" => {
+            println!("{}", HELP_TEXT);
+        }
+        "quit" | "exit" => {
+            return Ok(false); // Stop
+        }
+        "add" => {
+            let (title, description, priority, assignee, tags) = parse_add_args(args)?;
+            let user = get_current_user()?;
+            let branch = get_current_branch()?;
+
+            let id = create_task(
+                ctx,
+                &title,
+                description.as_deref(),
+                priority.as_deref(),
+                assignee.as_deref(),
+                tags,
+                &user,
+                &branch,
+            )?;
+            println!("Created task: {}", id);
+        }
+        "list" | "ls" => {
+            let (status, assignee, tag, priority, format) = parse_list_args(args);
+            list_tasks(
+                ctx,
+                status.as_deref(),
+                assignee.as_deref(),
+                tag.as_deref(),
+                priority.as_deref(),
+                format,
+            )?;
+        }
+        "show" => {
+            let (id, events) = parse_show_args(args)?;
+            show_task(ctx, &id, events)?;
+        }
+        _ => {
+            println!("Unknown command: {}. Type 'help' for available commands.", cmd);
+        }
+    }
+
+    Ok(true)
+}
+
+// =============================================================================
+// Shell Entry Point
+// =============================================================================
+
+/// Run the interactive shell
+pub fn run_shell(ctx: FabricContext) -> Result<()> {
+    let config = Config::builder()
+        .history_ignore_space(true)
+        .history_ignore_dups(true)?
+        .build();
+
+    let completer = FabricCompleter::new(FabricContext::new(ctx.root.clone()));
+    let mut rl: Editor<FabricCompleter, DefaultHistory> = Editor::with_config(config)?;
+    rl.set_helper(Some(completer));
+
+    // Load history
+    let history_path = dirs::data_local_dir()
+        .map(|p| p.join("fabric").join("shell_history"))
+        .unwrap_or_else(|| ctx.root.join(".shell_history"));
+
+    if let Some(parent) = history_path.parent() {
+        std::fs::create_dir_all(parent).ok();
+    }
+
+    let _ = rl.load_history(&history_path);
+
+    println!("fabric shell v0.1.0");
+    println!("Type 'help' for available commands, 'quit' to exit.\n");
+
+    loop {
+        let readline = rl.readline("fabric> ");
+
+        match readline {
+            Ok(line) => {
+                let line = line.trim();
+                if line.is_empty() {
+                    continue;
+                }
+
+                let _ = rl.add_history_entry(line);
+
+                match execute_command(&ctx, line) {
+                    Ok(true) => continue,
+                    Ok(false) => break,
+                    Err(e) => println!("Error: {}", e),
+                }
+            }
+            Err(ReadlineError::Interrupted) => {
+                println!("^C");
+                continue;
+            }
+            Err(ReadlineError::Eof) => {
+                println!("exit");
+                break;
+            }
+            Err(err) => {
+                println!("Error: {:?}", err);
+                break;
+            }
+        }
+    }
+
+    // Save history
+    let _ = rl.save_history(&history_path);
+
+    Ok(())
+}
