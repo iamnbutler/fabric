@@ -12,16 +12,21 @@ pub struct FabricContext {
 }
 
 impl FabricContext {
+    /// Create a new FabricContext with the given root directory
+    pub fn new(root: PathBuf) -> Self {
+        Self {
+            events_dir: root.join("events"),
+            archive_dir: root.join("archive"),
+            root,
+        }
+    }
+
     pub fn discover() -> Result<Self> {
         let mut current = std::env::current_dir()?;
         loop {
             let fabric_dir = current.join(".fabric");
             if fabric_dir.is_dir() {
-                return Ok(Self {
-                    root: fabric_dir.clone(),
-                    events_dir: fabric_dir.join("events"),
-                    archive_dir: fabric_dir.join("archive"),
-                });
+                return Ok(Self::new(fabric_dir));
             }
             if !current.pop() {
                 return Err(anyhow!(

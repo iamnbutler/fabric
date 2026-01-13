@@ -32,31 +32,34 @@ pub fn validate(ctx: &FabricContext, strict: bool) -> Result<ValidationResult> {
         validate_event_file(&file, &filename, &mut errors, &mut warnings, &mut seen_ids, &mut created_ids)?;
     }
 
-    // Check for orphaned references
-    let state = materialize(ctx)?;
-    for task in state.tasks.values() {
-        for blocked_by in &task.blocked_by {
-            if !state.tasks.contains_key(blocked_by) {
-                warnings.push(format!(
-                    "Task {} references non-existent blocked_by: {}",
-                    task.id, blocked_by
-                ));
+    // Only check for orphaned references if no errors occurred
+    // (materialize will fail on invalid events)
+    if errors.is_empty() {
+        let state = materialize(ctx)?;
+        for task in state.tasks.values() {
+            for blocked_by in &task.blocked_by {
+                if !state.tasks.contains_key(blocked_by) {
+                    warnings.push(format!(
+                        "Task {} references non-existent blocked_by: {}",
+                        task.id, blocked_by
+                    ));
+                }
             }
-        }
-        for blocks in &task.blocks {
-            if !state.tasks.contains_key(blocks) {
-                warnings.push(format!(
-                    "Task {} references non-existent blocks: {}",
-                    task.id, blocks
-                ));
+            for blocks in &task.blocks {
+                if !state.tasks.contains_key(blocks) {
+                    warnings.push(format!(
+                        "Task {} references non-existent blocks: {}",
+                        task.id, blocks
+                    ));
+                }
             }
-        }
-        if let Some(parent) = &task.parent {
-            if !state.tasks.contains_key(parent) {
-                warnings.push(format!(
-                    "Task {} references non-existent parent: {}",
-                    task.id, parent
-                ));
+            if let Some(parent) = &task.parent {
+                if !state.tasks.contains_key(parent) {
+                    warnings.push(format!(
+                        "Task {} references non-existent parent: {}",
+                        task.id, parent
+                    ));
+                }
             }
         }
     }
