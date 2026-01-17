@@ -209,6 +209,43 @@ impl Helper for FabricCompleter {}
 // Command Parsing & Execution
 // =============================================================================
 
+/// Split a command line respecting quoted strings
+fn shell_split(line: &str) -> Vec<String> {
+    let mut tokens = Vec::new();
+    let mut current = String::new();
+    let mut in_quotes = false;
+    let mut quote_char = ' ';
+
+    for c in line.chars() {
+        if in_quotes {
+            if c == quote_char {
+                // End of quoted section
+                in_quotes = false;
+            } else {
+                current.push(c);
+            }
+        } else if c == '"' || c == '\'' {
+            // Start of quoted section
+            in_quotes = true;
+            quote_char = c;
+        } else if c == ' ' || c == '\t' {
+            // Whitespace outside quotes - token boundary
+            if !current.is_empty() {
+                tokens.push(current.clone());
+                current.clear();
+            }
+        } else {
+            current.push(c);
+        }
+    }
+
+    if !current.is_empty() {
+        tokens.push(current);
+    }
+
+    tokens
+}
+
 fn parse_add_args(
     args: &[&str],
 ) -> Result<(
@@ -389,13 +426,14 @@ fn parse_update_args(args: &[&str]) -> (Option<String>, Option<String>, Option<S
 }
 
 fn execute_command(ctx: &FabricContext, line: &str) -> Result<bool> {
-    let parts: Vec<&str> = line.split_whitespace().collect();
+    let parts = shell_split(line);
     if parts.is_empty() {
         return Ok(true); // Continue
     }
 
-    let cmd = parts[0];
-    let args = &parts[1..];
+    let cmd = parts[0].as_str();
+    let args: Vec<&str> = parts[1..].iter().map(|s| s.as_str()).collect();
+    let args = args.as_slice();
 
     match cmd {
         "help" | "?" => {
@@ -540,4 +578,65 @@ pub fn run_shell(ctx: FabricContext) -> Result<()> {
     let _ = rl.save_history(&history_path);
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_shell_split_simple() {
+        let result = shell_split("add Task title -p 1");
+        assert_eq!(result, vec!["add", "Task", "title", "-p", "1"]);
+    }
+
+    #[test]
+    fn test_shell_split_double_quotes() {
+        let result = shell_split(r#"add Task -d "This is a description""#);
+        assert_eq!(result, vec!["add", "Task", "-d", "This is a description"]);
+    }
+
+    #[test]
+    fn test_shell_split_single_quotes() {
+        let result = shell_split("add Task -d 'Single quoted description'");
+        assert_eq!(result, vec!["add", "Task", "-d", "Single quoted description"]);
+    }
+
+    #[test]
+    fn test_shell_split_mixed() {
+        let result = shell_split(r#"add "Quoted title" -p 1 -d "Quoted description""#);
+        assert_eq!(result, vec!["add", "Quoted title", "-p", "1", "-d", "Quoted description"]);
+    }
+
+    #[test]
+    fn test_shell_split_empty() {
+        let result = shell_split("");
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_shell_split_only_whitespace() {
+        let result = shell_split("   \t  ");
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_parse_add_args_basic() {
+        let args: &[&str] = &["Task", "title", "-p", "1"];
+        let (title, desc, priority, assignee, tags) = parse_add_args(args).unwrap();
+        assert_eq!(title, "Task title");
+        assert_eq!(priority, Some("1".to_string()));
+        assert!(desc.is_none());
+        assert!(assignee.is_none());
+        assert!(tags.is_empty());
+    }
+
+    #[test]
+    fn test_parse_add_args_with_description() {
+        let args: &[&str] = &["Task", "-d", "A description", "-p", "2"];
+        let (title, desc, priority, _, _) = parse_add_args(args).unwrap();
+        assert_eq!(title, "Task");
+        assert_eq!(desc, Some("A description".to_string()));
+        assert_eq!(priority, Some("2".to_string()));
+    }
 }
