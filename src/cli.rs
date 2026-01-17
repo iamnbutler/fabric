@@ -4,7 +4,10 @@ use clap::{Parser, Subcommand};
 use crate::archive::collect_all_events;
 use crate::context::FabricContext;
 use crate::state::{load_or_materialize_state, Task, TaskStatus};
-use crate::writer::{complete_task as write_complete, get_current_branch, get_current_user, reopen_task as write_reopen, update_task as write_update};
+use crate::writer::{
+    assign_task as write_assign, complete_task as write_complete, create_task as write_create,
+    get_current_branch, get_current_user, reopen_task as write_reopen, update_task as write_update,
+};
 
 #[derive(Parser)]
 #[command(name = "fabric")]
@@ -18,6 +21,23 @@ pub struct Cli {
 pub enum Commands {
     /// Initialize .fabric/ directory structure
     Init,
+    /// Create a new task
+    Add {
+        /// Task title
+        title: String,
+        /// Task description
+        #[arg(short, long)]
+        description: Option<String>,
+        /// Priority (p0, p1, p2, p3)
+        #[arg(short, long)]
+        priority: Option<String>,
+        /// Assignee (@username)
+        #[arg(short, long)]
+        assignee: Option<String>,
+        /// Tags (can be used multiple times)
+        #[arg(short, long)]
+        tag: Vec<String>,
+    },
     /// List tasks with optional filtering
     List {
         /// Status filter: open, complete, or all (default: open)
@@ -90,6 +110,23 @@ pub enum Commands {
         #[arg(short, long)]
         priority: Option<String>,
     },
+    /// Assign a task to a user
+    Assign {
+        /// Task ID to assign
+        id: String,
+        /// Assignee (@username)
+        assignee: String,
+    },
+    /// Assign a task to yourself
+    Claim {
+        /// Task ID to claim
+        id: String,
+    },
+    /// Unassign a task
+    Free {
+        /// Task ID to free
+        id: String,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -100,6 +137,7 @@ pub enum OutputFormat {
 }
 
 impl OutputFormat {
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Self {
         match s {
             "json" => OutputFormat::Json,
@@ -167,10 +205,7 @@ pub fn list_tasks(
                 return Ok(());
             }
 
-            println!(
-                "{:<15} {:<10} {:<12} {}",
-                "ID", "PRIORITY", "ASSIGNEE", "TITLE"
-            );
+            println!("{:<15} {:<10} {:<12} TITLE", "ID", "PRIORITY", "ASSIGNEE");
             for task in &tasks {
                 let priority = task.priority.as_deref().unwrap_or("-");
                 let assignee = task.assignee.as_deref().unwrap_or("-");
@@ -343,6 +378,86 @@ pub fn update_task(
         updates.push("priority");
     }
     println!("Updated task {}: {}", id, updates.join(", "));
+
+    Ok(())
+}
+
+pub fn add_task(
+    ctx: &FabricContext,
+    title: &str,
+    description: Option<&str>,
+    priority: Option<&str>,
+    assignee: Option<&str>,
+    tags: Vec<String>,
+) -> Result<()> {
+    let user = get_current_user()?;
+    let branch = get_current_branch()?;
+
+    let id = write_create(
+        ctx,
+        title,
+        description,
+        priority,
+        assignee,
+        tags,
+        &user,
+        &branch,
+    )?;
+    println!("Created task: {}", id);
+
+    Ok(())
+}
+
+pub fn assign_task(ctx: &FabricContext, id: &str, assignee: &str) -> Result<()> {
+    let state = load_or_materialize_state(ctx)?;
+
+    // Verify task exists
+    state
+        .tasks
+        .get(id)
+        .ok_or_else(|| anyhow!("Task not found: {}", id))?;
+
+    let user = get_current_user()?;
+    let branch = get_current_branch()?;
+
+    write_assign(ctx, id, Some(assignee), &user, &branch)?;
+    println!("Assigned task {} to {}", id, assignee);
+
+    Ok(())
+}
+
+pub fn claim_task(ctx: &FabricContext, id: &str) -> Result<()> {
+    let state = load_or_materialize_state(ctx)?;
+
+    // Verify task exists
+    state
+        .tasks
+        .get(id)
+        .ok_or_else(|| anyhow!("Task not found: {}", id))?;
+
+    let user = get_current_user()?;
+    let branch = get_current_branch()?;
+
+    write_assign(ctx, id, Some(&user), &user, &branch)?;
+    println!("Claimed task {} (assigned to {})", id, user);
+
+    Ok(())
+}
+
+pub fn free_task(ctx: &FabricContext, id: &str) -> Result<()> {
+    let state = load_or_materialize_state(ctx)?;
+
+    // Verify task exists
+    state
+        .tasks
+        .get(id)
+        .ok_or_else(|| anyhow!("Task not found: {}", id))?;
+
+    let user = get_current_user()?;
+    let branch = get_current_branch()?;
+
+    write_assign(ctx, id, None, &user, &branch)?;
+    println!("Freed task {} (unassigned)", id);
 
     Ok(())
 }

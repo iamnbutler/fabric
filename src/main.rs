@@ -2,7 +2,10 @@ use anyhow::Result;
 use clap::Parser;
 
 use fabric::archive::archive_tasks;
-use fabric::cli::{complete_task, list_tasks, reopen_task, show_task, update_task, Cli, Commands, OutputFormat};
+use fabric::cli::{
+    add_task, assign_task, claim_task, complete_task, free_task, list_tasks, reopen_task,
+    show_task, update_task, Cli, Commands, OutputFormat,
+};
 use fabric::context::{init, FabricContext};
 use fabric::shell::run_shell;
 use fabric::state::rebuild;
@@ -13,6 +16,23 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Init => init(),
+        Commands::Add {
+            title,
+            description,
+            priority,
+            assignee,
+            tag,
+        } => {
+            let ctx = FabricContext::discover()?;
+            add_task(
+                &ctx,
+                &title,
+                description.as_deref(),
+                priority.as_deref(),
+                assignee.as_deref(),
+                tag,
+            )
+        }
         Commands::List {
             status,
             assignee,
@@ -75,6 +95,18 @@ fn main() -> Result<()> {
                 description.as_deref(),
                 priority.as_deref(),
             )
+        }
+        Commands::Assign { id, assignee } => {
+            let ctx = FabricContext::discover()?;
+            assign_task(&ctx, &id, &assignee)
+        }
+        Commands::Claim { id } => {
+            let ctx = FabricContext::discover()?;
+            claim_task(&ctx, &id)
+        }
+        Commands::Free { id } => {
+            let ctx = FabricContext::discover()?;
+            free_task(&ctx, &id)
         }
     }
 }

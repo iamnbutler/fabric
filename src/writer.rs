@@ -26,6 +26,7 @@ pub fn write_event(ctx: &FabricContext, event: &Event) -> Result<()> {
 }
 
 /// Create a new task and return its ID
+#[allow(clippy::too_many_arguments)]
 pub fn create_task(
     ctx: &FabricContext,
     title: &str,
@@ -97,13 +98,22 @@ pub fn update_task(
     let mut d = serde_json::Map::new();
 
     if let Some(t) = title {
-        d.insert("title".to_string(), serde_json::Value::String(t.to_string()));
+        d.insert(
+            "title".to_string(),
+            serde_json::Value::String(t.to_string()),
+        );
     }
     if let Some(desc) = description {
-        d.insert("description".to_string(), serde_json::Value::String(desc.to_string()));
+        d.insert(
+            "description".to_string(),
+            serde_json::Value::String(desc.to_string()),
+        );
     }
     if let Some(p) = priority {
-        d.insert("priority".to_string(), serde_json::Value::String(p.to_string()));
+        d.insert(
+            "priority".to_string(),
+            serde_json::Value::String(p.to_string()),
+        );
     }
 
     if d.is_empty() {
@@ -156,6 +166,29 @@ pub fn reopen_task(ctx: &FabricContext, id: &str, by: &str, branch: &str) -> Res
         by: by.to_string(),
         branch: branch.to_string(),
         d: serde_json::json!({}),
+    };
+
+    write_event(ctx, &event)
+}
+
+/// Assign a task to a user
+pub fn assign_task(
+    ctx: &FabricContext,
+    id: &str,
+    assignee: Option<&str>,
+    by: &str,
+    branch: &str,
+) -> Result<()> {
+    let event = Event {
+        v: 1,
+        op: Operation::Assign,
+        id: id.to_string(),
+        ts: Utc::now(),
+        by: by.to_string(),
+        branch: branch.to_string(),
+        d: serde_json::json!({
+            "to": assignee
+        }),
     };
 
     write_event(ctx, &event)
