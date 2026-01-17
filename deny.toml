@@ -2,13 +2,11 @@
 # https://embarkstudios.github.io/cargo-deny/
 
 [advisories]
-db-path = "~/.cargo/advisory-db"
-vulnerability = "deny"
-unmaintained = "warn"
-yanked = "warn"
-notice = "warn"
+version = 2
+ignore = []
 
 [licenses]
+version = 2
 allow = [
     "MIT",
     "Apache-2.0",
@@ -19,14 +17,11 @@ allow = [
     "Unicode-DFS-2016",
     "Zlib",
 ]
-confidence-threshold = 0.8
 
 [bans]
 multiple-versions = "warn"
 wildcards = "allow"
-highlight = "all"
 
 [sources]
 unknown-registry = "deny"
 unknown-git = "deny"
-allow-registry = ["https://github.com/rust-lang/crates.io-index"]
