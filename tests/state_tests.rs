@@ -1,6 +1,6 @@
+use serde_json::json;
 use spool::context::SpoolContext;
 use spool::state::{Task, TaskStatus};
-use serde_json::json;
 use std::fs;
 use std::io::Write;
 use tempfile::TempDir;

@@ -1,6 +1,6 @@
 use chrono::Utc;
-use spool::event::{Event, Operation};
 use serde_json::json;
+use spool::event::{Event, Operation};
 
 #[test]
 fn test_operation_serialization() {

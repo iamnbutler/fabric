@@ -1,6 +1,6 @@
 use chrono::{Duration, Utc};
-use spool::context::SpoolContext;
 use serde_json::json;
+use spool::context::SpoolContext;
 use std::fs;
 use std::io::Write;
 use tempfile::TempDir;
