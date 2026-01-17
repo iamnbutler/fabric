@@ -314,6 +314,7 @@ fn apply_event(tasks: &mut HashMap<String, Task>, event: Event) {
 // Index Building
 // =============================================================================
 
+#[allow(clippy::type_complexity)]
 pub fn build_index(ctx: &FabricContext) -> Result<Index> {
     let mut task_files: HashMap<String, HashSet<String>> = HashMap::new();
     let mut task_info: HashMap<

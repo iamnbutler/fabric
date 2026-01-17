@@ -17,7 +17,7 @@ pub fn archive_tasks(ctx: &FabricContext, days: u32, dry_run: bool) -> Result<Ve
         .values()
         .filter(|t| {
             t.status == TaskStatus::Complete
-                && t.completed.map_or(false, |c| c < cutoff)
+                && t.completed.is_some_and(|c| c < cutoff)
                 && t.archived.is_none()
         })
         .collect();

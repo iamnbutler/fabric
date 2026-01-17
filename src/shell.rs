@@ -19,7 +19,9 @@ use crate::writer::{create_task, get_current_branch, get_current_user};
 // Shell Commands
 // =============================================================================
 
-const COMMANDS: &[&str] = &["add", "list", "show", "update", "complete", "reopen", "help", "quit", "exit"];
+const COMMANDS: &[&str] = &[
+    "add", "list", "show", "update", "complete", "reopen", "help", "quit", "exit",
+];
 
 const HELP_TEXT: &str = r#"
 fabric shell - Interactive mode
@@ -102,7 +104,10 @@ impl Completer for FabricCompleter {
 
         // If we're completing after 'show', 'update', 'complete', or 'reopen', complete task IDs
         let cmd = words.first().copied();
-        if (cmd == Some("show") || cmd == Some("update") || cmd == Some("complete") || cmd == Some("reopen"))
+        if (cmd == Some("show")
+            || cmd == Some("update")
+            || cmd == Some("complete")
+            || cmd == Some("reopen"))
             && words.len() <= 2
         {
             let prefix = if line_to_cursor.ends_with(' ') {
@@ -246,6 +251,7 @@ fn shell_split(line: &str) -> Vec<String> {
     tokens
 }
 
+#[allow(clippy::type_complexity)]
 fn parse_add_args(
     args: &[&str],
 ) -> Result<(
@@ -381,10 +387,8 @@ fn parse_show_args(args: &[&str]) -> Result<(String, bool)> {
 fn parse_resolution_arg(args: &[&str]) -> Option<String> {
     let mut i = 0;
     while i < args.len() {
-        if args[i] == "-r" || args[i] == "--resolution" {
-            if i + 1 < args.len() {
-                return Some(args[i + 1].to_string());
-            }
+        if (args[i] == "-r" || args[i] == "--resolution") && i + 1 < args.len() {
+            return Some(args[i + 1].to_string());
         }
         i += 1;
     }
@@ -482,7 +486,13 @@ fn execute_command(ctx: &FabricContext, line: &str) -> Result<bool> {
             }
             let id = args[0];
             let (title, description, priority) = parse_update_args(&args[1..]);
-            update_task(ctx, id, title.as_deref(), description.as_deref(), priority.as_deref())?;
+            update_task(
+                ctx,
+                id,
+                title.as_deref(),
+                description.as_deref(),
+                priority.as_deref(),
+            )?;
         }
         "complete" | "done" | "close" => {
             if args.is_empty() {
@@ -599,13 +609,19 @@ mod tests {
     #[test]
     fn test_shell_split_single_quotes() {
         let result = shell_split("add Task -d 'Single quoted description'");
-        assert_eq!(result, vec!["add", "Task", "-d", "Single quoted description"]);
+        assert_eq!(
+            result,
+            vec!["add", "Task", "-d", "Single quoted description"]
+        );
     }
 
     #[test]
     fn test_shell_split_mixed() {
         let result = shell_split(r#"add "Quoted title" -p 1 -d "Quoted description""#);
-        assert_eq!(result, vec!["add", "Quoted title", "-p", "1", "-d", "Quoted description"]);
+        assert_eq!(
+            result,
+            vec!["add", "Quoted title", "-p", "1", "-d", "Quoted description"]
+        );
     }
 
     #[test]

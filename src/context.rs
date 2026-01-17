@@ -50,7 +50,7 @@ impl FabricContext {
             for entry in fs::read_dir(&self.events_dir)? {
                 let entry = entry?;
                 let path = entry.path();
-                if path.extension().map_or(false, |ext| ext == "jsonl") {
+                if path.extension().is_some_and(|ext| ext == "jsonl") {
                     files.push(path);
                 }
             }
@@ -65,7 +65,7 @@ impl FabricContext {
             for entry in fs::read_dir(&self.archive_dir)? {
                 let entry = entry?;
                 let path = entry.path();
-                if path.extension().map_or(false, |ext| ext == "jsonl") {
+                if path.extension().is_some_and(|ext| ext == "jsonl") {
                     files.push(path);
                 }
             }
