@@ -4,7 +4,7 @@ use std::fs;
 use tempfile::TempDir;
 
 fn fabric_cmd() -> Command {
-    Command::cargo_bin("fabric").unwrap()
+    Command::new(assert_cmd::cargo::cargo_bin!("fabric"))
 }
 
 fn setup_initialized_fabric(temp_dir: &TempDir) {
