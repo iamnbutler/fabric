@@ -354,7 +354,15 @@ fn test_cli_parse_update_all_fields() {
 #[test]
 fn test_cli_parse_update_short_flags() {
     let cli = Cli::parse_from([
-        "fabric", "update", "task-short", "-t", "Short title", "-d", "Short desc", "-p", "p2",
+        "fabric",
+        "update",
+        "task-short",
+        "-t",
+        "Short title",
+        "-d",
+        "Short desc",
+        "-p",
+        "p2",
     ]);
 
     if let Commands::Update {
@@ -390,5 +398,97 @@ fn test_cli_parse_update_no_options() {
         assert!(priority.is_none());
     } else {
         panic!("Expected Update command");
+    }
+}
+
+#[test]
+fn test_cli_parse_add_basic() {
+    let cli = Cli::parse_from(["fabric", "add", "My task title"]);
+
+    if let Commands::Add {
+        title,
+        description,
+        priority,
+        assignee,
+        tag,
+    } = cli.command
+    {
+        assert_eq!(title, "My task title");
+        assert!(description.is_none());
+        assert!(priority.is_none());
+        assert!(assignee.is_none());
+        assert!(tag.is_empty());
+    } else {
+        panic!("Expected Add command");
+    }
+}
+
+#[test]
+fn test_cli_parse_add_with_all_options() {
+    let cli = Cli::parse_from([
+        "fabric",
+        "add",
+        "Full task",
+        "-d",
+        "A description",
+        "-p",
+        "p1",
+        "-a",
+        "@alice",
+        "-t",
+        "bug",
+        "-t",
+        "urgent",
+    ]);
+
+    if let Commands::Add {
+        title,
+        description,
+        priority,
+        assignee,
+        tag,
+    } = cli.command
+    {
+        assert_eq!(title, "Full task");
+        assert_eq!(description.as_deref(), Some("A description"));
+        assert_eq!(priority.as_deref(), Some("p1"));
+        assert_eq!(assignee.as_deref(), Some("@alice"));
+        assert_eq!(tag, vec!["bug", "urgent"]);
+    } else {
+        panic!("Expected Add command");
+    }
+}
+
+#[test]
+fn test_cli_parse_assign() {
+    let cli = Cli::parse_from(["fabric", "assign", "task-123", "@bob"]);
+
+    if let Commands::Assign { id, assignee } = cli.command {
+        assert_eq!(id, "task-123");
+        assert_eq!(assignee, "@bob");
+    } else {
+        panic!("Expected Assign command");
+    }
+}
+
+#[test]
+fn test_cli_parse_claim() {
+    let cli = Cli::parse_from(["fabric", "claim", "task-456"]);
+
+    if let Commands::Claim { id } = cli.command {
+        assert_eq!(id, "task-456");
+    } else {
+        panic!("Expected Claim command");
+    }
+}
+
+#[test]
+fn test_cli_parse_free() {
+    let cli = Cli::parse_from(["fabric", "free", "task-789"]);
+
+    if let Commands::Free { id } = cli.command {
+        assert_eq!(id, "task-789");
+    } else {
+        panic!("Expected Free command");
     }
 }
