@@ -33,6 +33,10 @@ spool show task-abc123
 spool assign task-abc123 @alice
 spool complete task-abc123
 
+# Group tasks with streams
+spool add "Backend work" --stream api
+spool list --stream api
+
 # Interactive mode
 spool shell
 ```
