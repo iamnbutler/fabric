@@ -6,8 +6,8 @@ use crate::context::SpoolContext;
 use crate::state::{load_or_materialize_state, Task, TaskStatus};
 use crate::writer::{
     assign_task as write_assign, complete_task as write_complete, create_task as write_create,
-    get_current_branch, get_current_user, reopen_task as write_reopen, update_task as write_update,
-    CreateTaskParams,
+    get_current_branch, get_current_user, reopen_task as write_reopen, set_stream as write_stream,
+    update_task as write_update, CreateTaskParams,
 };
 
 #[derive(Parser)]
@@ -116,6 +116,9 @@ pub enum Commands {
         /// New priority
         #[arg(short, long)]
         priority: Option<String>,
+        /// Move to stream (use "" to remove from stream)
+        #[arg(long)]
+        stream: Option<String>,
     },
     /// Assign a task to a user
     Assign {
@@ -128,6 +131,13 @@ pub enum Commands {
     Claim {
         /// Task ID to claim
         id: String,
+    },
+    /// Move a task to a stream (or remove from stream)
+    Stream {
+        /// Task ID to move
+        id: String,
+        /// Stream name (omit to remove from stream)
+        name: Option<String>,
     },
     /// Unassign a task
     Free {
@@ -249,6 +259,9 @@ pub fn show_task(ctx: &SpoolContext, id: &str, show_events: bool) -> Result<()> 
     println!("ID:       {}", task.id);
     println!("Title:    {}", task.title);
     println!("Status:   {:?}", task.status);
+    if let Some(s) = &task.stream {
+        println!("Stream:   {}", s);
+    }
     if let Some(p) = &task.priority {
         println!("Priority: {}", p);
     }
@@ -366,6 +379,7 @@ pub fn update_task(
     title: Option<&str>,
     description: Option<&str>,
     priority: Option<&str>,
+    stream: Option<&str>,
 ) -> Result<()> {
     let state = load_or_materialize_state(ctx)?;
 
@@ -378,7 +392,16 @@ pub fn update_task(
     let user = get_current_user()?;
     let branch = get_current_branch()?;
 
-    write_update(ctx, id, title, description, priority, &user, &branch)?;
+    // Handle field updates
+    if title.is_some() || description.is_some() || priority.is_some() {
+        write_update(ctx, id, title, description, priority, &user, &branch)?;
+    }
+
+    // Handle stream change separately (different operation type)
+    if let Some(s) = stream {
+        let stream_value = if s.is_empty() { None } else { Some(s) };
+        write_stream(ctx, id, stream_value, &user, &branch)?;
+    }
 
     let mut updates = Vec::new();
     if title.is_some() {
@@ -389,6 +412,9 @@ pub fn update_task(
     }
     if priority.is_some() {
         updates.push("priority");
+    }
+    if stream.is_some() {
+        updates.push("stream");
     }
     println!("Updated task {}: {}", id, updates.join(", "));
 
@@ -475,6 +501,28 @@ pub fn free_task(ctx: &SpoolContext, id: &str) -> Result<()> {
 
     write_assign(ctx, id, None, &user, &branch)?;
     println!("Freed task {} (unassigned)", id);
+
+    Ok(())
+}
+
+pub fn stream_task(ctx: &SpoolContext, id: &str, stream: Option<&str>) -> Result<()> {
+    let state = load_or_materialize_state(ctx)?;
+
+    // Verify task exists
+    state
+        .tasks
+        .get(id)
+        .ok_or_else(|| anyhow!("Task not found: {}", id))?;
+
+    let user = get_current_user()?;
+    let branch = get_current_branch()?;
+
+    write_stream(ctx, id, stream, &user, &branch)?;
+
+    match stream {
+        Some(s) => println!("Moved task {} to stream '{}'", id, s),
+        None => println!("Removed task {} from stream", id),
+    }
 
     Ok(())
 }

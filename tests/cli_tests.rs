@@ -268,6 +268,7 @@ fn test_cli_parse_update_with_title() {
         title,
         description,
         priority,
+        stream: _,
     } = cli.command
     {
         assert_eq!(id, "task-123");
@@ -294,6 +295,7 @@ fn test_cli_parse_update_with_description() {
         title,
         description,
         priority,
+        stream: _,
     } = cli.command
     {
         assert_eq!(id, "task-456");
@@ -314,6 +316,7 @@ fn test_cli_parse_update_with_priority() {
         title,
         description,
         priority,
+        stream: _,
     } = cli.command
     {
         assert_eq!(id, "task-789");
@@ -344,6 +347,7 @@ fn test_cli_parse_update_all_fields() {
         title,
         description,
         priority,
+        stream: _,
     } = cli.command
     {
         assert_eq!(id, "task-full");
@@ -374,6 +378,7 @@ fn test_cli_parse_update_short_flags() {
         title,
         description,
         priority,
+        stream: _,
     } = cli.command
     {
         assert_eq!(id, "task-short");
@@ -394,6 +399,7 @@ fn test_cli_parse_update_no_options() {
         title,
         description,
         priority,
+        stream: _,
     } = cli.command
     {
         assert_eq!(id, "task-empty");

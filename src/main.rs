@@ -4,7 +4,7 @@ use clap::Parser;
 use spool::archive::archive_tasks;
 use spool::cli::{
     add_task, assign_task, claim_task, complete_task, free_task, list_tasks, reopen_task,
-    show_task, update_task, Cli, Commands, OutputFormat,
+    show_task, stream_task, update_task, Cli, Commands, OutputFormat,
 };
 use spool::context::{init, SpoolContext};
 use spool::shell::run_shell;
@@ -90,6 +90,7 @@ fn main() -> Result<()> {
             title,
             description,
             priority,
+            stream,
         } => {
             let ctx = SpoolContext::discover()?;
             update_task(
@@ -98,6 +99,7 @@ fn main() -> Result<()> {
                 title.as_deref(),
                 description.as_deref(),
                 priority.as_deref(),
+                stream.as_deref(),
             )
         }
         Commands::Assign { id, assignee } => {
@@ -111,6 +113,10 @@ fn main() -> Result<()> {
         Commands::Free { id } => {
             let ctx = SpoolContext::discover()?;
             free_task(&ctx, &id)
+        }
+        Commands::Stream { id, name } => {
+            let ctx = SpoolContext::discover()?;
+            stream_task(&ctx, &id, name.as_deref())
         }
     }
 }
