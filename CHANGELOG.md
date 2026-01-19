@@ -2,6 +2,14 @@
 
 All notable changes to Spool will be documented in this file.
 
+## [0.3.1] - 2026-01-19
+
+### Added
+- `spool stream <id> [name]` command to move tasks between streams
+- `--stream` flag on `spool update` command
+- Stream field displayed in `spool show` output
+- Shell: `stream` command and `--stream` flag on `update`
+
 ## [0.3.0] - 2026-01-19
 
 ### Added

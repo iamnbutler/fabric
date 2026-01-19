@@ -608,7 +608,7 @@ pub fn run_shell(ctx: SpoolContext) -> Result<()> {
 
     let _ = rl.load_history(&history_path);
 
-    println!("spool shell v0.3.0");
+    println!("spool shell v0.3.1");
     println!("Type 'help' for available commands, 'quit' to exit.\n");
 
     loop {
