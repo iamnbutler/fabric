@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build fabric release binaries for distribution
+# Build spool release binaries for distribution
 
 set -e
 
@@ -7,7 +7,7 @@ VERSION="${1:-$(cargo metadata --format-version=1 --no-deps | grep -o '"version"
 TARGET_DIR="target/release"
 DIST_DIR="dist"
 
-echo "Building fabric v${VERSION}"
+echo "Building spool v${VERSION}"
 
 # Clean dist directory
 rm -rf "$DIST_DIR"
@@ -34,8 +34,8 @@ case "$OS" in
 esac
 
 TARGET="${ARCH}-${OS}"
-BINARY_NAME="fabric"
-ARCHIVE_NAME="fabric-${VERSION}-${TARGET}"
+BINARY_NAME="spool"
+ARCHIVE_NAME="spool-${VERSION}-${TARGET}"
 
 # Copy binary to dist
 echo "Packaging ${ARCHIVE_NAME}..."
