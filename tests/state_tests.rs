@@ -436,3 +436,77 @@ fn test_state_materialization_archive() {
     let task = state.tasks.get("task-archive").unwrap();
     assert_eq!(task.archived.as_deref(), Some("2024-01"));
 }
+
+#[test]
+fn test_state_materialization_create_with_stream() {
+    let temp_dir = TempDir::new().unwrap();
+    let spool_dir = setup_spool_dir(&temp_dir);
+
+    let events = vec![json!({
+        "v": 1, "op": "create", "id": "task-in-stream",
+        "ts": "2024-01-15T10:00:00Z", "by": "@tester", "branch": "main",
+        "d": {"title": "Task in stream", "stream": "my-stream"}
+    })];
+
+    write_events(&spool_dir.join("events"), "2024-01-15.jsonl", &events);
+
+    let ctx = create_test_context(&spool_dir);
+    let state = spool::state::materialize(&ctx).unwrap();
+
+    let task = state.tasks.get("task-in-stream").unwrap();
+    assert_eq!(task.stream.as_deref(), Some("my-stream"));
+}
+
+#[test]
+fn test_state_materialization_set_stream() {
+    let temp_dir = TempDir::new().unwrap();
+    let spool_dir = setup_spool_dir(&temp_dir);
+
+    let events = vec![
+        json!({
+            "v": 1, "op": "create", "id": "task-1",
+            "ts": "2024-01-15T10:00:00Z", "by": "@tester", "branch": "main",
+            "d": {"title": "Task without stream"}
+        }),
+        json!({
+            "v": 1, "op": "set_stream", "id": "task-1",
+            "ts": "2024-01-15T11:00:00Z", "by": "@tester", "branch": "main",
+            "d": {"stream": "agent-work"}
+        }),
+    ];
+
+    write_events(&spool_dir.join("events"), "2024-01-15.jsonl", &events);
+
+    let ctx = create_test_context(&spool_dir);
+    let state = spool::state::materialize(&ctx).unwrap();
+
+    let task = state.tasks.get("task-1").unwrap();
+    assert_eq!(task.stream.as_deref(), Some("agent-work"));
+}
+
+#[test]
+fn test_state_materialization_set_stream_to_none() {
+    let temp_dir = TempDir::new().unwrap();
+    let spool_dir = setup_spool_dir(&temp_dir);
+
+    let events = vec![
+        json!({
+            "v": 1, "op": "create", "id": "task-1",
+            "ts": "2024-01-15T10:00:00Z", "by": "@tester", "branch": "main",
+            "d": {"title": "Task in stream", "stream": "old-stream"}
+        }),
+        json!({
+            "v": 1, "op": "set_stream", "id": "task-1",
+            "ts": "2024-01-15T11:00:00Z", "by": "@tester", "branch": "main",
+            "d": {"stream": null}
+        }),
+    ];
+
+    write_events(&spool_dir.join("events"), "2024-01-15.jsonl", &events);
+
+    let ctx = create_test_context(&spool_dir);
+    let state = spool::state::materialize(&ctx).unwrap();
+
+    let task = state.tasks.get("task-1").unwrap();
+    assert!(task.stream.is_none());
+}

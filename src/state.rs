@@ -20,6 +20,8 @@ pub struct Task {
     pub tags: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub assignee: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stream: Option<String>,
     pub created: DateTime<Utc>,
     pub created_by: String,
     pub created_branch: String,
@@ -162,6 +164,7 @@ fn apply_event(tasks: &mut HashMap<String, Task>, event: Event) {
                     .unwrap_or_default(),
                 comments: Vec::new(),
                 archived: None,
+                stream: d.get("stream").and_then(|v| v.as_str()).map(String::from),
             };
             tasks.insert(event.id, task);
         }
@@ -288,6 +291,18 @@ fn apply_event(tasks: &mut HashMap<String, Task>, event: Event) {
                     .get("ref")
                     .and_then(|v| v.as_str())
                     .map(String::from);
+                task.updated = event.ts;
+            }
+        }
+        Operation::SetStream => {
+            if let Some(task) = tasks.get_mut(&event.id) {
+                task.stream = event.d.get("stream").and_then(|v| {
+                    if v.is_null() {
+                        None
+                    } else {
+                        v.as_str().map(String::from)
+                    }
+                });
                 task.updated = event.ts;
             }
         }
