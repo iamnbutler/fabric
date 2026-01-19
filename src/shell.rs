@@ -546,7 +546,7 @@ fn execute_command(ctx: &SpoolContext, line: &str) -> Result<bool> {
                 return Err(anyhow!("Usage: stream <task-id> [<stream-name>]"));
             }
             let id = args[0];
-            let stream_name = args.get(1).map(|s| *s);
+            let stream_name = args.get(1).copied();
 
             let user = get_current_user()?;
             let branch = get_current_branch()?;
