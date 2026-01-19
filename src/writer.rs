@@ -34,6 +34,7 @@ pub fn create_task(
     priority: Option<&str>,
     assignee: Option<&str>,
     tags: Vec<String>,
+    stream: Option<&str>,
     by: &str,
     branch: &str,
 ) -> Result<String> {
@@ -55,6 +56,9 @@ pub fn create_task(
     if !tags.is_empty() {
         d["tags"] =
             serde_json::Value::Array(tags.into_iter().map(serde_json::Value::String).collect());
+    }
+    if let Some(s) = stream {
+        d["stream"] = serde_json::Value::String(s.to_string());
     }
 
     let event = Event {
@@ -188,6 +192,29 @@ pub fn assign_task(
         branch: branch.to_string(),
         d: serde_json::json!({
             "to": assignee
+        }),
+    };
+
+    write_event(ctx, &event)
+}
+
+/// Set a task's stream (or remove from stream if None)
+pub fn set_stream(
+    ctx: &SpoolContext,
+    id: &str,
+    stream: Option<&str>,
+    by: &str,
+    branch: &str,
+) -> Result<()> {
+    let event = Event {
+        v: 1,
+        op: Operation::SetStream,
+        id: id.to_string(),
+        ts: Utc::now(),
+        by: by.to_string(),
+        branch: branch.to_string(),
+        d: serde_json::json!({
+            "stream": stream
         }),
     };
 

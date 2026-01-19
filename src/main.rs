@@ -22,6 +22,7 @@ fn main() -> Result<()> {
             priority,
             assignee,
             tag,
+            stream,
         } => {
             let ctx = SpoolContext::discover()?;
             add_task(
@@ -31,6 +32,7 @@ fn main() -> Result<()> {
                 priority.as_deref(),
                 assignee.as_deref(),
                 tag,
+                stream.as_deref(),
             )
         }
         Commands::List {
@@ -38,6 +40,7 @@ fn main() -> Result<()> {
             assignee,
             tag,
             priority,
+            stream,
             format,
         } => {
             let ctx = SpoolContext::discover()?;
@@ -48,6 +51,7 @@ fn main() -> Result<()> {
                 assignee.as_deref(),
                 tag.as_deref(),
                 priority.as_deref(),
+                stream.as_deref(),
                 fmt,
             )
         }

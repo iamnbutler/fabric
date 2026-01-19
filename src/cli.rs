@@ -37,6 +37,9 @@ pub enum Commands {
         /// Tags (can be used multiple times)
         #[arg(short, long)]
         tag: Vec<String>,
+        /// Stream to add the task to
+        #[arg(long)]
+        stream: Option<String>,
     },
     /// List tasks with optional filtering
     List {
@@ -52,6 +55,9 @@ pub enum Commands {
         /// Filter by priority
         #[arg(short, long)]
         priority: Option<String>,
+        /// Filter by stream
+        #[arg(long)]
+        stream: Option<String>,
         /// Output format: table, json, or ids
         #[arg(short, long, default_value = "table")]
         format: String,
@@ -153,6 +159,7 @@ pub fn list_tasks(
     assignee: Option<&str>,
     tag: Option<&str>,
     priority: Option<&str>,
+    stream: Option<&str>,
     format: OutputFormat,
 ) -> Result<()> {
     let state = load_or_materialize_state(ctx)?;
@@ -182,7 +189,12 @@ pub fn list_tasks(
                 .map(|p| t.priority.as_deref() == Some(p))
                 .unwrap_or(true);
 
-            status_match && assignee_match && tag_match && priority_match
+            // Stream filter
+            let stream_match = stream
+                .map(|s| t.stream.as_deref() == Some(s))
+                .unwrap_or(true);
+
+            status_match && assignee_match && tag_match && priority_match && stream_match
         })
         .collect();
 
@@ -389,6 +401,7 @@ pub fn add_task(
     priority: Option<&str>,
     assignee: Option<&str>,
     tags: Vec<String>,
+    stream: Option<&str>,
 ) -> Result<()> {
     let user = get_current_user()?;
     let branch = get_current_branch()?;
@@ -400,6 +413,7 @@ pub fn add_task(
         priority,
         assignee,
         tags,
+        stream,
         &user,
         &branch,
     )?;

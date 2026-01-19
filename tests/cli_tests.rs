@@ -27,6 +27,7 @@ fn test_cli_parse_list_defaults() {
         assignee,
         tag,
         priority,
+        stream,
         format,
     } = cli.command
     {
@@ -34,6 +35,7 @@ fn test_cli_parse_list_defaults() {
         assert!(assignee.is_none());
         assert!(tag.is_none());
         assert!(priority.is_none());
+        assert!(stream.is_none());
         assert_eq!(format, "table");
     } else {
         panic!("Expected List command");
@@ -62,6 +64,7 @@ fn test_cli_parse_list_with_filters() {
         assignee,
         tag,
         priority,
+        stream: _,
         format,
     } = cli.command
     {
@@ -86,6 +89,7 @@ fn test_cli_parse_list_short_flags() {
         assignee,
         tag,
         priority,
+        stream: _,
         format,
     } = cli.command
     {
@@ -411,6 +415,7 @@ fn test_cli_parse_add_basic() {
         priority,
         assignee,
         tag,
+        stream,
     } = cli.command
     {
         assert_eq!(title, "My task title");
@@ -418,6 +423,7 @@ fn test_cli_parse_add_basic() {
         assert!(priority.is_none());
         assert!(assignee.is_none());
         assert!(tag.is_empty());
+        assert!(stream.is_none());
     } else {
         panic!("Expected Add command");
     }
@@ -447,6 +453,7 @@ fn test_cli_parse_add_with_all_options() {
         priority,
         assignee,
         tag,
+        stream: _,
     } = cli.command
     {
         assert_eq!(title, "Full task");

@@ -24,6 +24,7 @@ pub enum Operation {
     Complete,
     Reopen,
     Archive,
+    SetStream,
 }
 
 impl std::fmt::Display for Operation {
@@ -38,6 +39,7 @@ impl std::fmt::Display for Operation {
             Operation::Complete => write!(f, "complete"),
             Operation::Reopen => write!(f, "reopen"),
             Operation::Archive => write!(f, "archive"),
+            Operation::SetStream => write!(f, "set_stream"),
         }
     }
 }

@@ -4,8 +4,8 @@ use tempfile::TempDir;
 use spool::context::SpoolContext;
 use spool::event::{Event, Operation};
 use spool::writer::{
-    complete_task, create_task, get_current_branch, get_current_user, reopen_task, update_task,
-    write_event,
+    complete_task, create_task, get_current_branch, get_current_user, reopen_task, set_stream,
+    update_task, write_event,
 };
 
 fn setup_spool_dir(temp_dir: &TempDir) -> std::path::PathBuf {
@@ -101,6 +101,7 @@ fn test_create_task_returns_id() {
         None,
         None,
         vec![],
+        None,
         "@tester",
         "main",
     )
@@ -131,6 +132,7 @@ fn test_create_task_with_all_fields() {
         Some("p1"),
         Some("@dev"),
         vec!["bug".to_string(), "urgent".to_string()],
+        None,
         "@tester",
         "feature-branch",
     )
@@ -300,9 +302,42 @@ fn test_create_task_generates_unique_ids() {
     let spool_dir = setup_spool_dir(&temp_dir);
     let ctx = create_test_context(&spool_dir);
 
-    let id1 = create_task(&ctx, "Task 1", None, None, None, vec![], "@tester", "main").unwrap();
-    let id2 = create_task(&ctx, "Task 2", None, None, None, vec![], "@tester", "main").unwrap();
-    let id3 = create_task(&ctx, "Task 3", None, None, None, vec![], "@tester", "main").unwrap();
+    let id1 = create_task(
+        &ctx,
+        "Task 1",
+        None,
+        None,
+        None,
+        vec![],
+        None,
+        "@tester",
+        "main",
+    )
+    .unwrap();
+    let id2 = create_task(
+        &ctx,
+        "Task 2",
+        None,
+        None,
+        None,
+        vec![],
+        None,
+        "@tester",
+        "main",
+    )
+    .unwrap();
+    let id3 = create_task(
+        &ctx,
+        "Task 3",
+        None,
+        None,
+        None,
+        vec![],
+        None,
+        "@tester",
+        "main",
+    )
+    .unwrap();
 
     // All IDs should be unique
     assert_ne!(id1, id2);
@@ -316,7 +351,18 @@ fn test_event_json_format() {
     let spool_dir = setup_spool_dir(&temp_dir);
     let ctx = create_test_context(&spool_dir);
 
-    create_task(&ctx, "Test", None, None, None, vec![], "@tester", "main").unwrap();
+    create_task(
+        &ctx,
+        "Test",
+        None,
+        None,
+        None,
+        vec![],
+        None,
+        "@tester",
+        "main",
+    )
+    .unwrap();
 
     let event_files = ctx.get_event_files().unwrap();
     let content = fs::read_to_string(&event_files[0]).unwrap();
@@ -332,4 +378,97 @@ fn test_event_json_format() {
     assert_eq!(parsed["by"], "@tester");
     assert_eq!(parsed["branch"], "main");
     assert!(parsed["d"].is_object());
+}
+
+#[test]
+fn test_create_task_with_stream() {
+    let temp_dir = TempDir::new().unwrap();
+    let spool_dir = setup_spool_dir(&temp_dir);
+    let ctx = create_test_context(&spool_dir);
+
+    let _id = create_task(
+        &ctx,
+        "Task in stream",
+        None,
+        None,
+        None,
+        vec![],
+        Some("my-stream"),
+        "@tester",
+        "main",
+    )
+    .unwrap();
+
+    let event_files = ctx.get_event_files().unwrap();
+    let content = fs::read_to_string(&event_files[0]).unwrap();
+
+    assert!(content.contains("\"stream\":\"my-stream\""));
+}
+
+#[test]
+fn test_set_stream_writes_event() {
+    let temp_dir = TempDir::new().unwrap();
+    let spool_dir = setup_spool_dir(&temp_dir);
+    let ctx = create_test_context(&spool_dir);
+
+    // Create a task first
+    let id = create_task(
+        &ctx,
+        "Test task",
+        None,
+        None,
+        None,
+        vec![],
+        None,
+        "@tester",
+        "main",
+    )
+    .unwrap();
+
+    // Set stream
+    set_stream(&ctx, &id, Some("agent-work"), "@tester", "main").unwrap();
+
+    let event_files = ctx.get_event_files().unwrap();
+    let content = fs::read_to_string(&event_files[0]).unwrap();
+
+    // Should have two events
+    let lines: Vec<&str> = content.lines().collect();
+    assert_eq!(lines.len(), 2);
+
+    // Second event should be set_stream
+    let set_stream_event: serde_json::Value = serde_json::from_str(lines[1]).unwrap();
+    assert_eq!(set_stream_event["op"], "set_stream");
+    assert_eq!(set_stream_event["id"], id);
+    assert_eq!(set_stream_event["d"]["stream"], "agent-work");
+}
+
+#[test]
+fn test_set_stream_to_none() {
+    let temp_dir = TempDir::new().unwrap();
+    let spool_dir = setup_spool_dir(&temp_dir);
+    let ctx = create_test_context(&spool_dir);
+
+    let id = create_task(
+        &ctx,
+        "Test",
+        None,
+        None,
+        None,
+        vec![],
+        Some("old-stream"),
+        "@tester",
+        "main",
+    )
+    .unwrap();
+
+    // Remove from stream
+    set_stream(&ctx, &id, None, "@tester", "main").unwrap();
+
+    let event_files = ctx.get_event_files().unwrap();
+    let content = fs::read_to_string(&event_files[0]).unwrap();
+
+    let lines: Vec<&str> = content.lines().collect();
+    let set_stream_event: serde_json::Value = serde_json::from_str(lines[1]).unwrap();
+    assert_eq!(set_stream_event["op"], "set_stream");
+    assert!(set_stream_event["d"]["stream"].is_null());
 }
