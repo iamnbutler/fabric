@@ -130,6 +130,7 @@ fn bench_event_serialization(c: &mut Criterion) {
         blocked_by: vec![],
         comments: vec![],
         archived: None,
+        stream: None,
     };
 
     group.bench_function("task_to_json", |b| {

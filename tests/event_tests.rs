@@ -14,6 +14,7 @@ fn test_operation_serialization() {
         (Operation::Complete, "complete"),
         (Operation::Reopen, "reopen"),
         (Operation::Archive, "archive"),
+        (Operation::SetStream, "set_stream"),
     ];
 
     for (op, expected_str) in ops {
@@ -34,6 +35,7 @@ fn test_operation_deserialization() {
         ("\"complete\"", Operation::Complete),
         ("\"reopen\"", Operation::Reopen),
         ("\"archive\"", Operation::Archive),
+        ("\"set_stream\"", Operation::SetStream),
     ];
 
     for (json_str, expected_op) in cases {
@@ -53,6 +55,7 @@ fn test_operation_display() {
     assert_eq!(Operation::Complete.to_string(), "complete");
     assert_eq!(Operation::Reopen.to_string(), "reopen");
     assert_eq!(Operation::Archive.to_string(), "archive");
+    assert_eq!(Operation::SetStream.to_string(), "set_stream");
 }
 
 #[test]
