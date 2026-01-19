@@ -33,27 +33,32 @@ struct ListArgs {
 }
 use crate::context::SpoolContext;
 use crate::state::load_or_materialize_state;
-use crate::writer::{create_task, get_current_branch, get_current_user, CreateTaskParams};
+use crate::writer::{
+    create_task, get_current_branch, get_current_user, set_stream, CreateTaskParams,
+};
 
 const COMMANDS: &[&str] = &[
-    "add", "list", "show", "update", "complete", "reopen", "help", "quit", "exit",
+    "add", "list", "show", "update", "stream", "complete", "reopen", "help", "quit", "exit",
 ];
 
 const HELP_TEXT: &str = r#"
 spool shell - Interactive mode
 
 Commands:
-  add <title> [-d <description>] [-p <priority>] [-a <assignee>] [-t <tag>...]
+  add <title> [-d <description>] [-p <priority>] [-a <assignee>] [-t <tag>...] [--stream <name>]
       Create a new task
 
-  list [--status <open|complete|all>] [--assignee <name>] [--tag <tag>] [--priority <p>]
+  list [--status <open|complete|all>] [--assignee <name>] [--tag <tag>] [--priority <p>] [--stream <name>]
       List tasks with optional filters
 
   show <task-id> [--events]
       Show details of a specific task
 
-  update <task-id> [-t <title>] [-d <description>] [-p <priority>]
+  update <task-id> [-t <title>] [-d <description>] [-p <priority>] [--stream <name>]
       Update a task's fields
+
+  stream <task-id> [<name>]
+      Move task to a stream (omit name to remove from stream)
 
   complete <task-id> [-r <resolution>]
       Mark a task as complete (resolution: done, wontfix, duplicate, obsolete)
@@ -413,10 +418,18 @@ fn parse_resolution_arg(args: &[&str]) -> Option<String> {
     None
 }
 
-fn parse_update_args(args: &[&str]) -> (Option<String>, Option<String>, Option<String>) {
+struct UpdateArgs {
+    title: Option<String>,
+    description: Option<String>,
+    priority: Option<String>,
+    stream: Option<String>,
+}
+
+fn parse_update_args(args: &[&str]) -> UpdateArgs {
     let mut title = None;
     let mut description = None;
     let mut priority = None;
+    let mut stream = None;
 
     let mut i = 0;
     while i < args.len() {
@@ -439,12 +452,23 @@ fn parse_update_args(args: &[&str]) -> (Option<String>, Option<String>, Option<S
                     priority = Some(args[i].to_string());
                 }
             }
+            "--stream" => {
+                i += 1;
+                if i < args.len() {
+                    stream = Some(args[i].to_string());
+                }
+            }
             _ => {}
         }
         i += 1;
     }
 
-    (title, description, priority)
+    UpdateArgs {
+        title,
+        description,
+        priority,
+        stream,
+    }
 }
 
 fn execute_command(ctx: &SpoolContext, line: &str) -> Result<bool> {
@@ -503,18 +527,36 @@ fn execute_command(ctx: &SpoolContext, line: &str) -> Result<bool> {
         "update" | "edit" => {
             if args.is_empty() {
                 return Err(anyhow!(
-                    "Usage: update <task-id> [-t title] [-d description] [-p priority]"
+                    "Usage: update <task-id> [-t title] [-d description] [-p priority] [--stream name]"
                 ));
             }
             let id = args[0];
-            let (title, description, priority) = parse_update_args(&args[1..]);
+            let update_args = parse_update_args(&args[1..]);
             update_task(
                 ctx,
                 id,
-                title.as_deref(),
-                description.as_deref(),
-                priority.as_deref(),
+                update_args.title.as_deref(),
+                update_args.description.as_deref(),
+                update_args.priority.as_deref(),
+                update_args.stream.as_deref(),
             )?;
+        }
+        "stream" => {
+            if args.is_empty() {
+                return Err(anyhow!("Usage: stream <task-id> [<stream-name>]"));
+            }
+            let id = args[0];
+            let stream_name = args.get(1).copied();
+
+            let user = get_current_user()?;
+            let branch = get_current_branch()?;
+
+            set_stream(ctx, id, stream_name, &user, &branch)?;
+
+            match stream_name {
+                Some(s) => println!("Moved task {} to stream '{}'", id, s),
+                None => println!("Removed task {} from stream", id),
+            }
         }
         "complete" | "done" | "close" => {
             if args.is_empty() {
