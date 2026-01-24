@@ -1,5 +1,5 @@
 use clap::Parser;
-use spool::cli::{Cli, Commands, OutputFormat};
+use spool::cli::{Cli, Commands, OutputFormat, StreamCommands};
 
 #[test]
 fn test_output_format_from_str() {
@@ -503,5 +503,159 @@ fn test_cli_parse_free() {
         assert_eq!(id, "task-789");
     } else {
         panic!("Expected Free command");
+    }
+}
+
+// Stream command tests
+
+#[test]
+fn test_cli_parse_stream_add() {
+    let cli = Cli::parse_from(["spool", "stream", "add", "My Project"]);
+
+    if let Commands::Stream { command } = cli.command {
+        if let StreamCommands::Add { name, description } = command {
+            assert_eq!(name, "My Project");
+            assert!(description.is_none());
+        } else {
+            panic!("Expected Stream Add command");
+        }
+    } else {
+        panic!("Expected Stream command");
+    }
+}
+
+#[test]
+fn test_cli_parse_stream_add_with_description() {
+    let cli = Cli::parse_from([
+        "spool",
+        "stream",
+        "add",
+        "Backend Work",
+        "-d",
+        "API development tasks",
+    ]);
+
+    if let Commands::Stream { command } = cli.command {
+        if let StreamCommands::Add { name, description } = command {
+            assert_eq!(name, "Backend Work");
+            assert_eq!(description.as_deref(), Some("API development tasks"));
+        } else {
+            panic!("Expected Stream Add command");
+        }
+    } else {
+        panic!("Expected Stream command");
+    }
+}
+
+#[test]
+fn test_cli_parse_stream_list() {
+    let cli = Cli::parse_from(["spool", "stream", "list"]);
+
+    if let Commands::Stream { command } = cli.command {
+        if let StreamCommands::List { format } = command {
+            assert_eq!(format, "table");
+        } else {
+            panic!("Expected Stream List command");
+        }
+    } else {
+        panic!("Expected Stream command");
+    }
+}
+
+#[test]
+fn test_cli_parse_stream_list_json() {
+    let cli = Cli::parse_from(["spool", "stream", "list", "-f", "json"]);
+
+    if let Commands::Stream { command } = cli.command {
+        if let StreamCommands::List { format } = command {
+            assert_eq!(format, "json");
+        } else {
+            panic!("Expected Stream List command");
+        }
+    } else {
+        panic!("Expected Stream command");
+    }
+}
+
+#[test]
+fn test_cli_parse_stream_show() {
+    let cli = Cli::parse_from(["spool", "stream", "show", "stream-123"]);
+
+    if let Commands::Stream { command } = cli.command {
+        if let StreamCommands::Show { id } = command {
+            assert_eq!(id, "stream-123");
+        } else {
+            panic!("Expected Stream Show command");
+        }
+    } else {
+        panic!("Expected Stream command");
+    }
+}
+
+#[test]
+fn test_cli_parse_stream_update() {
+    let cli = Cli::parse_from(["spool", "stream", "update", "stream-456", "-n", "New Name"]);
+
+    if let Commands::Stream { command } = cli.command {
+        if let StreamCommands::Update {
+            id,
+            name,
+            description,
+        } = command
+        {
+            assert_eq!(id, "stream-456");
+            assert_eq!(name.as_deref(), Some("New Name"));
+            assert!(description.is_none());
+        } else {
+            panic!("Expected Stream Update command");
+        }
+    } else {
+        panic!("Expected Stream command");
+    }
+}
+
+#[test]
+fn test_cli_parse_stream_update_all() {
+    let cli = Cli::parse_from([
+        "spool",
+        "stream",
+        "update",
+        "stream-789",
+        "-n",
+        "Updated Name",
+        "-d",
+        "Updated description",
+    ]);
+
+    if let Commands::Stream { command } = cli.command {
+        if let StreamCommands::Update {
+            id,
+            name,
+            description,
+        } = command
+        {
+            assert_eq!(id, "stream-789");
+            assert_eq!(name.as_deref(), Some("Updated Name"));
+            assert_eq!(description.as_deref(), Some("Updated description"));
+        } else {
+            panic!("Expected Stream Update command");
+        }
+    } else {
+        panic!("Expected Stream command");
+    }
+}
+
+#[test]
+fn test_cli_parse_stream_delete() {
+    let cli = Cli::parse_from(["spool", "stream", "delete", "stream-abc"]);
+
+    if let Commands::Stream { command } = cli.command {
+        if let StreamCommands::Delete { id } = command {
+            assert_eq!(id, "stream-abc");
+        } else {
+            panic!("Expected Stream Delete command");
+        }
+    } else {
+        panic!("Expected Stream command");
     }
 }
