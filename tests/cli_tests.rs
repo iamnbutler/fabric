@@ -28,6 +28,7 @@ fn test_cli_parse_list_defaults() {
         tag,
         priority,
         stream,
+        no_stream,
         format,
     } = cli.command
     {
@@ -36,6 +37,7 @@ fn test_cli_parse_list_defaults() {
         assert!(tag.is_none());
         assert!(priority.is_none());
         assert!(stream.is_none());
+        assert!(!no_stream);
         assert_eq!(format, "table");
     } else {
         panic!("Expected List command");
@@ -64,8 +66,8 @@ fn test_cli_parse_list_with_filters() {
         assignee,
         tag,
         priority,
-        stream: _,
         format,
+        ..
     } = cli.command
     {
         assert_eq!(status, "complete");
@@ -89,8 +91,8 @@ fn test_cli_parse_list_short_flags() {
         assignee,
         tag,
         priority,
-        stream: _,
         format,
+        ..
     } = cli.command
     {
         assert_eq!(status, "all");
@@ -98,6 +100,21 @@ fn test_cli_parse_list_short_flags() {
         assert_eq!(tag.as_deref(), Some("feature"));
         assert_eq!(priority.as_deref(), Some("p2"));
         assert_eq!(format, "ids");
+    } else {
+        panic!("Expected List command");
+    }
+}
+
+#[test]
+fn test_cli_parse_list_no_stream() {
+    let cli = Cli::parse_from(["spool", "list", "--no-stream"]);
+
+    if let Commands::List {
+        no_stream, stream, ..
+    } = cli.command
+    {
+        assert!(no_stream);
+        assert!(stream.is_none());
     } else {
         panic!("Expected List command");
     }
@@ -582,8 +599,25 @@ fn test_cli_parse_stream_show() {
     let cli = Cli::parse_from(["spool", "stream", "show", "stream-123"]);
 
     if let Commands::Stream { command } = cli.command {
-        if let StreamCommands::Show { id } = command {
-            assert_eq!(id, "stream-123");
+        if let StreamCommands::Show { id, name } = command {
+            assert_eq!(id.as_deref(), Some("stream-123"));
+            assert!(name.is_none());
+        } else {
+            panic!("Expected Stream Show command");
+        }
+    } else {
+        panic!("Expected Stream command");
+    }
+}
+
+#[test]
+fn test_cli_parse_stream_show_by_name() {
+    let cli = Cli::parse_from(["spool", "stream", "show", "--name", "my-stream"]);
+
+    if let Commands::Stream { command } = cli.command {
+        if let StreamCommands::Show { id, name } = command {
+            assert!(id.is_none());
+            assert_eq!(name.as_deref(), Some("my-stream"));
         } else {
             panic!("Expected Stream Show command");
         }

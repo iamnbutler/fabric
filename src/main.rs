@@ -42,6 +42,7 @@ fn main() -> Result<()> {
             tag,
             priority,
             stream,
+            no_stream,
             format,
         } => {
             let ctx = SpoolContext::discover()?;
@@ -53,6 +54,7 @@ fn main() -> Result<()> {
                 tag.as_deref(),
                 priority.as_deref(),
                 stream.as_deref(),
+                no_stream,
                 fmt,
             )
         }
@@ -125,7 +127,9 @@ fn main() -> Result<()> {
                     let fmt = OutputFormat::from_str(&format);
                     list_streams(&ctx, fmt)
                 }
-                StreamCommands::Show { id } => show_stream(&ctx, &id),
+                StreamCommands::Show { id, name } => {
+                    show_stream(&ctx, id.as_deref(), name.as_deref())
+                }
                 StreamCommands::Update {
                     id,
                     name,

@@ -338,7 +338,10 @@ fn apply_event(
                     .and_then(|v| v.as_str())
                     .unwrap_or("")
                     .to_string(),
-                description: d.get("description").and_then(|v| v.as_str()).map(String::from),
+                description: d
+                    .get("description")
+                    .and_then(|v| v.as_str())
+                    .map(String::from),
                 created: event.ts,
                 created_by: event.by.clone(),
             };

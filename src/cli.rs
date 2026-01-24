@@ -5,10 +5,11 @@ use crate::archive::collect_all_events;
 use crate::context::SpoolContext;
 use crate::state::{load_or_materialize_state, Task, TaskStatus};
 use crate::writer::{
-    assign_task as write_assign, complete_task as write_complete, create_task as write_create,
-    create_stream as write_create_stream, delete_stream as write_delete_stream,
-    get_current_branch, get_current_user, reopen_task as write_reopen, set_stream as write_stream,
-    update_stream as write_update_stream, update_task as write_update, CreateTaskParams,
+    assign_task as write_assign, complete_task as write_complete,
+    create_stream as write_create_stream, create_task as write_create,
+    delete_stream as write_delete_stream, get_current_branch, get_current_user,
+    reopen_task as write_reopen, set_stream as write_stream, update_stream as write_update_stream,
+    update_task as write_update, CreateTaskParams,
 };
 
 #[derive(Parser)]
@@ -60,6 +61,9 @@ pub enum Commands {
         /// Filter by stream
         #[arg(long)]
         stream: Option<String>,
+        /// Show only tasks without a stream
+        #[arg(long)]
+        no_stream: bool,
         /// Output format: table, json, or ids
         #[arg(short, long, default_value = "table")]
         format: String,
@@ -165,7 +169,10 @@ pub enum StreamCommands {
     /// Show details of a stream and its tasks
     Show {
         /// Stream ID
-        id: String,
+        id: Option<String>,
+        /// Stream name (alternative to ID)
+        #[arg(short, long)]
+        name: Option<String>,
     },
     /// Update stream metadata
     Update {
@@ -210,6 +217,7 @@ pub fn list_tasks(
     tag: Option<&str>,
     priority: Option<&str>,
     stream: Option<&str>,
+    no_stream: bool,
     format: OutputFormat,
 ) -> Result<()> {
     let state = load_or_materialize_state(ctx)?;
@@ -239,10 +247,14 @@ pub fn list_tasks(
                 .map(|p| t.priority.as_deref() == Some(p))
                 .unwrap_or(true);
 
-            // Stream filter
-            let stream_match = stream
-                .map(|s| t.stream.as_deref() == Some(s))
-                .unwrap_or(true);
+            // Stream filter (--stream and --no-stream are mutually exclusive)
+            let stream_match = if no_stream {
+                t.stream.is_none()
+            } else {
+                stream
+                    .map(|s| t.stream.as_deref() == Some(s))
+                    .unwrap_or(true)
+            };
 
             status_match && assignee_match && tag_match && priority_match && stream_match
         })
@@ -613,9 +625,15 @@ pub fn list_streams(ctx: &SpoolContext, format: OutputFormat) -> Result<()> {
                 return Ok(());
             }
 
-            println!("{:<15} {:<20} {:<10} {:<10}", "ID", "NAME", "OPEN", "COMPLETE");
+            println!(
+                "{:<15} {:<20} {:<10} {:<10}",
+                "ID", "NAME", "OPEN", "COMPLETE"
+            );
             for stream in &streams {
-                let (open, complete) = task_counts.get(stream.id.as_str()).copied().unwrap_or((0, 0));
+                let (open, complete) = task_counts
+                    .get(stream.id.as_str())
+                    .copied()
+                    .unwrap_or((0, 0));
                 let name = if stream.name.len() > 18 {
                     format!("{}...", &stream.name[..15])
                 } else {
@@ -633,13 +651,23 @@ pub fn list_streams(ctx: &SpoolContext, format: OutputFormat) -> Result<()> {
 }
 
 /// Show details of a stream and its tasks
-pub fn show_stream(ctx: &SpoolContext, id: &str) -> Result<()> {
+pub fn show_stream(ctx: &SpoolContext, id: Option<&str>, name: Option<&str>) -> Result<()> {
     let state = load_or_materialize_state(ctx)?;
 
-    let stream = state
-        .streams
-        .get(id)
-        .ok_or_else(|| anyhow!("Stream not found: {}", id))?;
+    // Find stream by ID or name
+    let stream = match (id, name) {
+        (Some(id), _) => state
+            .streams
+            .get(id)
+            .ok_or_else(|| anyhow!("Stream not found: {}", id))?,
+        (None, Some(name)) => state
+            .streams
+            .values()
+            .find(|s| s.name == name)
+            .ok_or_else(|| anyhow!("Stream not found with name: {}", name))?,
+        (None, None) => return Err(anyhow!("Either stream ID or --name must be provided")),
+    };
+    let stream_id = &stream.id;
 
     println!("ID:          {}", stream.id);
     println!("Name:        {}", stream.name);
@@ -652,11 +680,14 @@ pub fn show_stream(ctx: &SpoolContext, id: &str) -> Result<()> {
     let mut tasks: Vec<&Task> = state
         .tasks
         .values()
-        .filter(|t| t.stream.as_deref() == Some(id))
+        .filter(|t| t.stream.as_deref() == Some(stream_id.as_str()))
         .collect();
     tasks.sort_by_key(|t| t.created);
 
-    let open_count = tasks.iter().filter(|t| t.status == TaskStatus::Open).count();
+    let open_count = tasks
+        .iter()
+        .filter(|t| t.status == TaskStatus::Open)
+        .count();
     let complete_count = tasks.len() - open_count;
 
     println!("\nTasks: {} open, {} complete", open_count, complete_count);

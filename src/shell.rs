@@ -32,6 +32,7 @@ struct ListArgs {
     tag: Option<String>,
     priority: Option<String>,
     stream: Option<String>,
+    no_stream: bool,
     format: OutputFormat,
 }
 use crate::context::SpoolContext;
@@ -51,7 +52,7 @@ Task Commands:
   add <title> [-d <description>] [-p <priority>] [-a <assignee>] [-t <tag>...] [--stream <id>]
       Create a new task
 
-  list [--status <open|complete|all>] [--assignee <name>] [--tag <tag>] [--priority <p>] [--stream <id>]
+  list [--status <open|complete|all>] [--assignee <name>] [--tag <tag>] [--priority <p>] [--stream <id>] [--no-stream]
       List tasks with optional filters
 
   show <task-id> [--events]
@@ -73,7 +74,7 @@ Stream Commands:
   stream list [-f <format>]
       List all streams with task counts
 
-  stream show <stream-id>
+  stream show <stream-id> | --name <name>
       Show stream details and its tasks
 
   stream update <stream-id> [-n <name>] [-d <description>]
@@ -417,6 +418,7 @@ fn parse_list_args(args: &[&str]) -> ListArgs {
     let mut tag = None;
     let mut priority = None;
     let mut stream = None;
+    let mut no_stream = false;
     let mut format = OutputFormat::Table;
 
     let mut i = 0;
@@ -452,6 +454,9 @@ fn parse_list_args(args: &[&str]) -> ListArgs {
                     stream = Some(args[i].to_string());
                 }
             }
+            "--no-stream" => {
+                no_stream = true;
+            }
             "-f" | "--format" => {
                 i += 1;
                 if i < args.len() {
@@ -469,6 +474,7 @@ fn parse_list_args(args: &[&str]) -> ListArgs {
         tag,
         priority,
         stream,
+        no_stream,
         format,
     }
 }
@@ -678,6 +684,7 @@ fn execute_command(ctx: &SpoolContext, line: &str) -> Result<bool> {
                 list_args.tag.as_deref(),
                 list_args.priority.as_deref(),
                 list_args.stream.as_deref(),
+                list_args.no_stream,
                 list_args.format,
             )?;
         }
@@ -722,9 +729,20 @@ fn execute_command(ctx: &SpoolContext, line: &str) -> Result<bool> {
                 }
                 "show" => {
                     if subargs.is_empty() {
-                        return Err(anyhow!("Usage: stream show <stream-id>"));
+                        return Err(anyhow!(
+                            "Usage: stream show <stream-id> or stream show --name <name>"
+                        ));
                     }
-                    show_stream(ctx, subargs[0])?;
+                    // Check for --name flag
+                    let (id, name) = if subargs[0] == "-n" || subargs[0] == "--name" {
+                        if subargs.len() < 2 {
+                            return Err(anyhow!("Usage: stream show --name <name>"));
+                        }
+                        (None, Some(subargs[1]))
+                    } else {
+                        (Some(subargs[0]), None)
+                    };
+                    show_stream(ctx, id, name)?;
                 }
                 "update" => {
                     if subargs.is_empty() {
