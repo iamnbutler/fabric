@@ -2,6 +2,30 @@
 
 All notable changes to Spool will be documented in this file.
 
+## [0.4.0] - 2026-01-24
+
+### Added
+- **Streams as first-class entities**: Streams are now proper entities with IDs, names, descriptions, and metadata
+- `spool stream add <name>` - Create a new stream
+- `spool stream list` - List all streams with task counts
+- `spool stream show <id>` - Show stream details and tasks
+- `spool stream show --name <name>` - Look up stream by name
+- `spool stream update <id>` - Update stream name/description
+- `spool stream delete <id>` - Delete empty streams
+- `--no-stream` flag on `spool list` to filter orphaned tasks
+- Migration system for upgrading from 0.3.x to 0.4.0
+- New event operations: `create_stream`, `update_stream`, `delete_stream`
+
+### Changed
+- **Breaking**: Stream API restructured as subcommands instead of `spool stream <task-id> [name]`
+- Tasks now reference streams by ID instead of name
+- Stream existence is validated when assigning tasks
+
+### Migration
+- Existing implicit streams (task stream names) are automatically converted to stream entities on first run
+- The migration creates `CreateStream` events for each unique stream name found
+- Tasks are updated to reference stream IDs
+
 ## [0.3.1] - 2026-01-19
 
 ### Added

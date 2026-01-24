@@ -107,6 +107,8 @@ spool list [OPTIONS]
 | `-a, --assignee` | Filter by assignee | - |
 | `-t, --tag` | Filter by tag | - |
 | `-p, --priority` | Filter by priority | - |
+| `--stream` | Filter by stream ID | - |
+| `--no-stream` | Show only tasks without a stream | - |
 | `-f, --format` | Output format: `table`, `json`, or `ids` | `table` |
 
 **Examples:**
@@ -123,6 +125,12 @@ spool list --assignee @alice
 
 # List high-priority tasks as JSON
 spool list --priority high --format json
+
+# List tasks in a specific stream
+spool list --stream <stream-id>
+
+# List tasks without a stream (orphaned tasks)
+spool list --no-stream
 
 # Get just task IDs for scripting
 spool list --format ids
@@ -250,6 +258,94 @@ spool validate
 spool validate --strict
 ```
 
+### `spool stream`
+
+Manage streams (workstreams/projects) for organizing tasks.
+
+#### `spool stream add`
+
+Create a new stream.
+
+```bash
+spool stream add <name> [OPTIONS]
+```
+
+**Options:**
+| Flag | Description |
+|------|-------------|
+| `-d, --description` | Stream description |
+
+**Examples:**
+
+```bash
+# Create a simple stream
+spool stream add "api"
+
+# Create a stream with description
+spool stream add "api" -d "Backend API development"
+```
+
+#### `spool stream list`
+
+List all streams with task counts.
+
+```bash
+spool stream list [OPTIONS]
+```
+
+**Options:**
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-f, --format` | Output format: `table`, `json`, or `ids` | `table` |
+
+#### `spool stream show`
+
+Show stream details and its tasks.
+
+```bash
+spool stream show <stream-id>
+spool stream show --name <name>
+```
+
+**Options:**
+| Flag | Description |
+|------|-------------|
+| `-n, --name` | Look up stream by name instead of ID |
+
+**Examples:**
+
+```bash
+# Show stream by ID
+spool stream show k8b2x-a1c3
+
+# Show stream by name
+spool stream show --name "api"
+```
+
+#### `spool stream update`
+
+Update stream metadata.
+
+```bash
+spool stream update <stream-id> [OPTIONS]
+```
+
+**Options:**
+| Flag | Description |
+|------|-------------|
+| `-n, --name` | New stream name |
+| `-d, --description` | New description |
+
+#### `spool stream delete`
+
+Delete a stream. The stream must have no tasks assigned.
+
+```bash
+spool stream delete <stream-id>
+```
+
+**Note:** Move or remove tasks from the stream before deleting it.
+
 ## Event Schema
 
 Events are stored as newline-delimited JSON (JSONL) with the following structure:
@@ -291,6 +387,10 @@ Events are stored as newline-delimited JSON (JSONL) with the following structure
 | `complete` | Mark task complete | `resolution?` |
 | `reopen` | Reopen completed task | - |
 | `archive` | Archive completed task | `ref` (archive file reference) |
+| `set_stream` | Set/remove task's stream | `stream` (null to remove) |
+| `create_stream` | Create a new stream | `name`, `description?` |
+| `update_stream` | Update stream metadata | `name?`, `description?` |
+| `delete_stream` | Delete a stream | - |
 
 ### Task ID Format
 

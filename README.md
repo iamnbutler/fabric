@@ -34,8 +34,9 @@ spool assign task-abc123 @alice
 spool complete task-abc123
 
 # Group tasks with streams
-spool add "Backend work" --stream api
-spool list --stream api
+spool stream add "api" -d "API development work"
+spool add "Backend work" --stream <stream-id>
+spool list --stream <stream-id>
 
 # Interactive mode
 spool shell
@@ -55,6 +56,7 @@ spool shell
 | `free` | Unassign task |
 | `complete` | Mark task complete |
 | `reopen` | Reopen completed task |
+| `stream` | Manage streams (add/list/show/update/delete) |
 | `shell` | Interactive mode |
 | `rebuild` | Regenerate caches |
 | `archive` | Archive old tasks |
