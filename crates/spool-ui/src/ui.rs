@@ -6,21 +6,41 @@ use ratatui::{
     Frame,
 };
 
-use crate::app::{App, Focus};
+use crate::app::{App, Focus, InputMode};
 
 pub fn draw(f: &mut Frame, app: &App) {
+    // Determine if we need a message/input bar
+    let has_message = app.message.is_some();
+    let in_input_mode = app.input_mode == InputMode::NewTask;
+    let show_bar = has_message || in_input_mode;
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(1), // Header
-            Constraint::Min(0),    // Main content
-            Constraint::Length(1), // Footer
-        ])
+        .constraints(if show_bar {
+            vec![
+                Constraint::Length(1), // Header
+                Constraint::Min(0),    // Main content
+                Constraint::Length(1), // Message/Input bar
+                Constraint::Length(1), // Footer
+            ]
+        } else {
+            vec![
+                Constraint::Length(1), // Header
+                Constraint::Min(0),    // Main content
+                Constraint::Length(1), // Footer
+            ]
+        })
         .split(f.area());
 
     draw_header(f, chunks[0], app);
     draw_main(f, chunks[1], app);
-    draw_footer(f, chunks[2], app);
+
+    if show_bar {
+        draw_input_bar(f, chunks[2], app);
+        draw_footer(f, chunks[3], app);
+    } else {
+        draw_footer(f, chunks[2], app);
+    }
 }
 
 fn draw_header(f: &mut Frame, area: Rect, app: &App) {
@@ -280,11 +300,33 @@ fn draw_task_detail(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(detail, area);
 }
 
-fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
-    let help = if app.search_mode {
-        " Type to search, Enter/Esc to close "
+fn draw_input_bar(f: &mut Frame, area: Rect, app: &App) {
+    let content = if app.input_mode == InputMode::NewTask {
+        Line::from(vec![
+            Span::styled(" New task: ", Style::default().fg(Color::Cyan)),
+            Span::raw(&app.input_buffer),
+            Span::styled("▌", Style::default().fg(Color::Cyan)),
+        ])
+    } else if let Some(msg) = &app.message {
+        Line::from(vec![Span::styled(
+            format!(" {}", msg),
+            Style::default().fg(Color::Yellow),
+        )])
     } else {
-        " q:quit  j/k:nav  Enter:detail  e:events  f:filter  s:sort  S:stream  /:search "
+        Line::from("")
+    };
+
+    let bar = Paragraph::new(content);
+    f.render_widget(bar, area);
+}
+
+fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
+    let help = match app.input_mode {
+        InputMode::NewTask => " Enter:create  Esc:cancel ",
+        InputMode::Normal if app.search_mode => " Type to search, Enter/Esc to close ",
+        InputMode::Normal => {
+            " q:quit  j/k:nav  c:complete  r:reopen  n:new  f:filter  s:sort  /:search "
+        }
     };
     let footer = Paragraph::new(help).style(Style::default().fg(Color::DarkGray));
     f.render_widget(footer, area);
