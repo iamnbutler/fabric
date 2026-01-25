@@ -14,5 +14,5 @@ path = "src/main.rs"
 [dependencies]
 spool = { path = "../spool" }
 anyhow = "1.0"
-# ratatui = "0.29"
-# crossterm = "0.28"
+ratatui = "0.29"
+crossterm = "0.28"
