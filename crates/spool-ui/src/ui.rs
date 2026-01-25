@@ -295,7 +295,8 @@ fn draw_task_detail(f: &mut Frame, area: Rect, app: &App) {
                 .border_style(border_style)
                 .title(title),
         )
-        .wrap(Wrap { trim: false });
+        .wrap(Wrap { trim: false })
+        .scroll((app.detail_scroll, 0));
 
     f.render_widget(detail, area);
 }

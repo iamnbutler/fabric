@@ -71,6 +71,7 @@ pub struct App {
     pub input_mode: InputMode,
     pub input_buffer: String,
     pub message: Option<String>,
+    pub detail_scroll: u16,
     pub tasks: Vec<Task>,
     pub streams: std::collections::HashMap<String, Stream>,
     pub stream_ids: Vec<String>, // sorted list of stream IDs for cycling
@@ -116,6 +117,7 @@ impl App {
             input_mode: InputMode::Normal,
             input_buffer: String::new(),
             message: None,
+            detail_scroll: 0,
             tasks,
             streams,
             stream_ids,
@@ -235,11 +237,21 @@ impl App {
     pub fn next_task(&mut self) {
         if !self.tasks.is_empty() {
             self.selected = (self.selected + 1).min(self.tasks.len() - 1);
+            self.detail_scroll = 0;
         }
     }
 
     pub fn previous_task(&mut self) {
         self.selected = self.selected.saturating_sub(1);
+        self.detail_scroll = 0;
+    }
+
+    pub fn scroll_detail_down(&mut self) {
+        self.detail_scroll = self.detail_scroll.saturating_add(1);
+    }
+
+    pub fn scroll_detail_up(&mut self) {
+        self.detail_scroll = self.detail_scroll.saturating_sub(1);
     }
 
     pub fn first_task(&mut self) {

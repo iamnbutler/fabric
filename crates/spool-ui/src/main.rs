@@ -67,8 +67,20 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, mut app: Ap
                     },
                     InputMode::Normal => match key.code {
                         KeyCode::Char('q') => return Ok(()),
-                        KeyCode::Char('j') | KeyCode::Down => app.next_task(),
-                        KeyCode::Char('k') | KeyCode::Up => app.previous_task(),
+                        KeyCode::Char('j') | KeyCode::Down => {
+                            if app.focus == app::Focus::Detail {
+                                app.scroll_detail_down();
+                            } else {
+                                app.next_task();
+                            }
+                        }
+                        KeyCode::Char('k') | KeyCode::Up => {
+                            if app.focus == app::Focus::Detail {
+                                app.scroll_detail_up();
+                            } else {
+                                app.previous_task();
+                            }
+                        }
                         KeyCode::Char('g') => app.first_task(),
                         KeyCode::Char('G') => app.last_task(),
                         KeyCode::Tab => app.toggle_focus(),
