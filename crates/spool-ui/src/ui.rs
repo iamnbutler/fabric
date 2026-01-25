@@ -244,7 +244,7 @@ fn draw_task_detail(f: &mut Frame, area: Rect, app: &mut App) {
         }
 
         // Event history
-        if app.show_events && !app.task_events.is_empty() {
+        if !app.task_events.is_empty() {
             lines.push(Line::from(""));
             lines.push(Line::from(vec![Span::styled(
                 "Event History:",
@@ -282,11 +282,7 @@ fn draw_task_detail(f: &mut Frame, area: Rect, app: &mut App) {
         vec![Line::from("No task selected")]
     };
 
-    let title = if app.show_events {
-        " Detail + Events "
-    } else {
-        " Detail (e: events) "
-    };
+    let title = " Detail ";
 
     // Update scroll bounds (area height minus borders)
     let content_height = content.len() as u16;

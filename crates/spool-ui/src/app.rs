@@ -81,7 +81,6 @@ pub struct App {
     pub selected: usize,
     pub focus: Focus,
     pub show_detail: bool,
-    pub show_events: bool,
     pub status_filter: StatusFilter,
     pub sort_by: SortBy,
     pub search_query: String,
@@ -129,7 +128,6 @@ impl App {
             selected: 0,
             focus: Focus::TaskList,
             show_detail: false,
-            show_events: false,
             status_filter: StatusFilter::Open,
             sort_by: SortBy::Priority,
             search_query: String::new(),
@@ -242,12 +240,18 @@ impl App {
         if !self.tasks.is_empty() {
             self.selected = (self.selected + 1).min(self.tasks.len() - 1);
             self.detail_scroll = 0;
+            if self.show_detail {
+                let _ = self.load_task_events();
+            }
         }
     }
 
     pub fn previous_task(&mut self) {
         self.selected = self.selected.saturating_sub(1);
         self.detail_scroll = 0;
+        if self.show_detail {
+            let _ = self.load_task_events();
+        }
     }
 
     pub fn scroll_detail_down(&mut self) {
@@ -282,11 +286,7 @@ impl App {
 
     pub fn toggle_detail(&mut self) {
         self.show_detail = !self.show_detail;
-    }
-
-    pub fn toggle_events(&mut self) {
-        self.show_events = !self.show_events;
-        if self.show_events {
+        if self.show_detail {
             let _ = self.load_task_events();
         }
     }
