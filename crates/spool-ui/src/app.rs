@@ -62,6 +62,8 @@ impl SortBy {
 pub struct App {
     pub tasks: Vec<Task>,
     pub streams: std::collections::HashMap<String, Stream>,
+    pub stream_ids: Vec<String>, // sorted list of stream IDs for cycling
+    pub stream_filter: Option<String>, // None = all streams
     pub selected: usize,
     pub focus: Focus,
     pub show_detail: bool,
@@ -80,6 +82,13 @@ impl App {
         let state = load_or_materialize_state(&ctx)?;
 
         let streams = state.streams.clone();
+        let mut stream_ids: Vec<String> = streams.keys().cloned().collect();
+        stream_ids.sort_by(|a, b| {
+            let name_a = streams.get(a).map(|s| s.name.as_str()).unwrap_or(a);
+            let name_b = streams.get(b).map(|s| s.name.as_str()).unwrap_or(b);
+            name_a.to_lowercase().cmp(&name_b.to_lowercase())
+        });
+
         let mut tasks: Vec<Task> = state
             .tasks
             .into_values()
@@ -95,6 +104,8 @@ impl App {
         Ok(Self {
             tasks,
             streams,
+            stream_ids,
+            stream_filter: None,
             selected: 0,
             focus: Focus::TaskList,
             show_detail: false,
@@ -112,7 +123,23 @@ impl App {
         let state = load_or_materialize_state(&self.ctx)?;
         self.streams = state.streams.clone();
 
+        // Update stream_ids list
+        self.stream_ids = self.streams.keys().cloned().collect();
+        self.stream_ids.sort_by(|a, b| {
+            let name_a = self.streams.get(a).map(|s| s.name.as_str()).unwrap_or(a);
+            let name_b = self.streams.get(b).map(|s| s.name.as_str()).unwrap_or(b);
+            name_a.to_lowercase().cmp(&name_b.to_lowercase())
+        });
+
+        // Validate stream_filter still exists
+        if let Some(ref filter) = self.stream_filter {
+            if !self.streams.contains_key(filter) {
+                self.stream_filter = None;
+            }
+        }
+
         let query = self.search_query.to_lowercase();
+        let stream_filter = self.stream_filter.clone();
         let mut tasks: Vec<Task> = state
             .tasks
             .into_values()
@@ -120,6 +147,10 @@ impl App {
                 StatusFilter::Open => t.status == TaskStatus::Open,
                 StatusFilter::Complete => t.status == TaskStatus::Complete,
                 StatusFilter::All => true,
+            })
+            .filter(|t| match &stream_filter {
+                None => true,
+                Some(stream_id) => t.stream.as_ref() == Some(stream_id),
             })
             .filter(|t| {
                 if query.is_empty() {
@@ -255,5 +286,36 @@ impl App {
     pub fn clear_search(&mut self) {
         self.search_query.clear();
         let _ = self.reload_tasks();
+    }
+
+    pub fn cycle_stream_filter(&mut self) {
+        if self.stream_ids.is_empty() {
+            return;
+        }
+
+        self.stream_filter = match &self.stream_filter {
+            None => Some(self.stream_ids[0].clone()),
+            Some(current) => {
+                let idx = self.stream_ids.iter().position(|id| id == current);
+                match idx {
+                    Some(i) if i + 1 < self.stream_ids.len() => {
+                        Some(self.stream_ids[i + 1].clone())
+                    }
+                    _ => None, // wrap back to "All"
+                }
+            }
+        };
+        let _ = self.reload_tasks();
+    }
+
+    pub fn stream_filter_label(&self) -> String {
+        match &self.stream_filter {
+            None => "All".to_string(),
+            Some(id) => self
+                .streams
+                .get(id)
+                .map(|s| s.name.clone())
+                .unwrap_or_else(|| id.clone()),
+        }
     }
 }

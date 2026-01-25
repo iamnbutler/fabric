@@ -25,16 +25,23 @@ pub fn draw(f: &mut Frame, app: &App) {
 
 fn draw_header(f: &mut Frame, area: Rect, app: &App) {
     let search_indicator = if !app.search_query.is_empty() {
-        format!("  filter: \"{}\"", app.search_query)
+        format!("  \"{}\"", app.search_query)
+    } else {
+        String::new()
+    };
+
+    let stream_indicator = if app.stream_filter.is_some() {
+        format!("  stream: {}", app.stream_filter_label())
     } else {
         String::new()
     };
 
     let title = format!(
-        " spool  {} tasks  [{}]  sort: {}{}",
+        " spool  {} tasks  [{}]  sort: {}{}{}",
         app.tasks.len(),
         app.status_filter.label(),
         app.sort_by.label(),
+        stream_indicator,
         search_indicator,
     );
     let header = Paragraph::new(title).style(
@@ -277,7 +284,7 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
     let help = if app.search_mode {
         " Type to search, Enter/Esc to close "
     } else {
-        " q:quit  j/k:nav  Enter:detail  e:events  f:filter  s:sort  /:search "
+        " q:quit  j/k:nav  Enter:detail  e:events  f:filter  s:sort  S:stream  /:search "
     };
     let footer = Paragraph::new(help).style(Style::default().fg(Color::DarkGray));
     f.render_widget(footer, area);

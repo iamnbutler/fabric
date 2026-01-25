@@ -67,6 +67,7 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, mut app: Ap
                         KeyCode::Char('e') => app.toggle_events(),
                         KeyCode::Char('f') => app.cycle_status_filter(),
                         KeyCode::Char('s') => app.cycle_sort(),
+                        KeyCode::Char('S') => app.cycle_stream_filter(),
                         KeyCode::Char('/') => app.toggle_search(),
                         KeyCode::Esc => app.clear_search(),
                         _ => {}
