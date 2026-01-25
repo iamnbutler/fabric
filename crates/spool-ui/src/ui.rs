@@ -358,7 +358,9 @@ fn draw_history_list(f: &mut Frame, area: Rect, app: &App) {
     let scroll_x = app.history_scroll_x as usize;
 
     // Build header row
-    let header_style = Style::default().fg(Color::DarkGray).add_modifier(Modifier::UNDERLINED);
+    let header_style = Style::default()
+        .fg(Color::DarkGray)
+        .add_modifier(Modifier::UNDERLINED);
     let header_cols: Vec<(String, Style)> = HISTORY_COLS
         .iter()
         .map(|(label, width)| (fixed_width(label, *width), header_style))
@@ -385,12 +387,33 @@ fn draw_history_list(f: &mut Frame, area: Rect, app: &App) {
 
             // Build columns with exact fixed widths (matching HISTORY_COLS order)
             let columns: Vec<(String, Style)> = vec![
-                (fixed_width(&op_str, HISTORY_COLS[0].1), Style::default().fg(op_color)),
-                (fixed_width(&name, HISTORY_COLS[1].1), Style::default().fg(Color::White)),
-                (fixed_width(&event.ts.format("%y.%m.%d %H:%M").to_string(), HISTORY_COLS[2].1), Style::default().fg(Color::White)),
-                (fixed_width(&event.by, HISTORY_COLS[3].1), Style::default().fg(Color::Cyan)),
-                (fixed_width(&event.branch, HISTORY_COLS[4].1), Style::default().fg(Color::DarkGray)),
-                (fixed_width(&event.id, HISTORY_COLS[5].1), Style::default().fg(Color::DarkGray)),
+                (
+                    fixed_width(&op_str, HISTORY_COLS[0].1),
+                    Style::default().fg(op_color),
+                ),
+                (
+                    fixed_width(&name, HISTORY_COLS[1].1),
+                    Style::default().fg(Color::White),
+                ),
+                (
+                    fixed_width(
+                        &event.ts.format("%y.%m.%d %H:%M").to_string(),
+                        HISTORY_COLS[2].1,
+                    ),
+                    Style::default().fg(Color::White),
+                ),
+                (
+                    fixed_width(&event.by, HISTORY_COLS[3].1),
+                    Style::default().fg(Color::Cyan),
+                ),
+                (
+                    fixed_width(&event.branch, HISTORY_COLS[4].1),
+                    Style::default().fg(Color::DarkGray),
+                ),
+                (
+                    fixed_width(&event.id, HISTORY_COLS[5].1),
+                    Style::default().fg(Color::DarkGray),
+                ),
             ];
 
             let spans = build_scrolled_spans(&columns, scroll_x);
@@ -421,7 +444,11 @@ fn draw_history_list(f: &mut Frame, area: Rect, app: &App) {
         Style::default().fg(Color::DarkGray)
     };
 
-    let title = format!(" History ({} events){} ", app.history_events.len(), scroll_indicator);
+    let title = format!(
+        " History ({} events){} ",
+        app.history_events.len(),
+        scroll_indicator
+    );
 
     // Split area for header + list
     let inner = Block::default()
@@ -449,6 +476,7 @@ fn draw_history_list(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(list, chunks[1]);
 }
 
+#[allow(clippy::vec_init_then_push)]
 fn draw_history_detail(f: &mut Frame, area: Rect, app: &App) {
     let content = if let Some(event) = app.selected_history_event() {
         let mut lines = vec![];
@@ -458,7 +486,9 @@ fn draw_history_detail(f: &mut Frame, area: Rect, app: &App) {
             Span::styled("Operation: ", Style::default().fg(Color::DarkGray)),
             Span::styled(
                 event.op.to_string(),
-                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
             ),
         ]));
 
