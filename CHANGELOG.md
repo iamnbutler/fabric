@@ -2,6 +2,36 @@
 
 All notable changes to Spool will be documented in this file.
 
+## [1.0.0] - 2026-01-25
+
+### Added
+- **spool-ui**: Terminal UI for spool using ratatui
+  - Task list with priority coloring and status markers
+  - Detail panel with event history
+  - Status filtering (open/complete/all)
+  - Sorting (priority/created/title)
+  - Search (title, description, tags)
+  - Stream navigation
+  - Inline task creation and completion
+- Workspace structure: `spool` (lib), `spool-cli` (CLI binary), `spool-ui` (TUI binary)
+
+### Changed
+- **Breaking**: Reorganized as cargo workspace with separate crates
+- Removed shell command (replaced by TUI)
+
+### TUI Keybindings
+| Key | Action |
+|-----|--------|
+| `j/k` | Navigate tasks (or scroll detail when focused) |
+| `c` | Complete task |
+| `r` | Reopen task |
+| `n` | New task |
+| `v` | Cycle view (Open/Complete/All) |
+| `s` | Cycle sort |
+| `S` | Cycle stream |
+| `/` | Search |
+| `q` | Quit |
+
 ## [0.4.0] - 2026-01-24
 
 ### Added

@@ -3,10 +3,27 @@
 Git-native, event-sourced task management.
 
 ```bash
-cargo install spool
+cargo install spool-cli     # CLI
+cargo install spool-ui      # TUI (optional)
 ```
 
 Tasks are stored as append-only event logs in `.spool/events/`. Every change is tracked, branches work naturally, and merge conflicts resolve automatically.
+
+## TUI
+
+Run `spool-ui` for a terminal interface:
+
+| Key | Action |
+|-----|--------|
+| `j/k` | Navigate / scroll detail |
+| `c` | Complete task |
+| `r` | Reopen task |
+| `n` | New task |
+| `v` | Cycle view (Open/Complete/All) |
+| `s` | Cycle sort |
+| `S` | Cycle stream |
+| `/` | Search |
+| `q` | Quit |
 
 ## Usage
 
