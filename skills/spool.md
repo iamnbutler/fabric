@@ -1,6 +1,22 @@
 # Spool - Task Management
 
-Spool is a git-native, event-sourced task management system used in this project. Tasks are stored in `.spool/events/` as JSONL files.
+Spool is a git-native, event-sourced task management system. Tasks are stored in `.spool/events/` as JSONL files.
+
+## Installation
+
+```bash
+cargo install spool-cli    # CLI
+cargo install spool-ui     # TUI (optional)
+```
+
+## TUI
+
+Run `spool-ui` for a terminal interface with:
+- Task list with priority coloring
+- Detail panel with event history
+- Filtering, sorting, search
+- Stream navigation
+- Inline task creation (`n`) and completion (`c`)
 
 ## Commands Reference
 
@@ -188,9 +204,6 @@ spool archive --dry-run
 
 # Validate event files
 spool validate
-
-# Start interactive shell mode
-spool shell
 ```
 
 ## Workflow Examples
