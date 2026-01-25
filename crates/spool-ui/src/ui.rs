@@ -325,7 +325,7 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
         InputMode::NewTask => " Enter:create  Esc:cancel ",
         InputMode::Normal if app.search_mode => " Type to search, Enter/Esc to close ",
         InputMode::Normal => {
-            " q:quit  j/k:nav  c:complete  r:reopen  n:new  f:filter  s:sort  /:search "
+            " q:quit  j/k:nav  c:complete  r:reopen  n:new  v:view  s:sort  /:search "
         }
     };
     let footer = Paragraph::new(help).style(Style::default().fg(Color::DarkGray));
