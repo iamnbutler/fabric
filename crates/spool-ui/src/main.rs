@@ -11,7 +11,7 @@ use crossterm::{
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
 
-use app::{App, InputMode};
+use app::{App, InputMode, View};
 
 fn main() -> Result<()> {
     // Setup terminal
@@ -65,6 +65,48 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, mut app: Ap
                         KeyCode::Char(c) => app.search_input(c),
                         _ => {}
                     },
+                    InputMode::Normal if app.view == View::History => match key.code {
+                        KeyCode::Char('q') => return Ok(()),
+                        KeyCode::Char('h') => app.toggle_history_view(),
+                        KeyCode::Esc => {
+                            if app.history_show_detail {
+                                app.close_history_detail();
+                            } else {
+                                app.toggle_history_view();
+                            }
+                        }
+                        KeyCode::Char('j') | KeyCode::Down => {
+                            if app.history_show_detail {
+                                app.history_detail_scroll_down();
+                            } else {
+                                app.history_next();
+                            }
+                        }
+                        KeyCode::Char('k') | KeyCode::Up => {
+                            if app.history_show_detail {
+                                app.history_detail_scroll_up();
+                            } else {
+                                app.history_previous();
+                            }
+                        }
+                        KeyCode::Char('g') => app.history_first(),
+                        KeyCode::Char('G') => app.history_last(),
+                        KeyCode::Char('l') | KeyCode::Right => app.history_scroll_right(),
+                        KeyCode::Left => app.history_scroll_left(),
+                        KeyCode::Enter => app.toggle_history_detail(),
+                        KeyCode::Tab => {
+                            // Allow navigating list even when detail is open
+                            if app.history_show_detail {
+                                app.history_next();
+                            }
+                        }
+                        KeyCode::BackTab => {
+                            if app.history_show_detail {
+                                app.history_previous();
+                            }
+                        }
+                        _ => {}
+                    },
                     InputMode::Normal => match key.code {
                         KeyCode::Char('q') => return Ok(()),
                         KeyCode::Char('j') | KeyCode::Down => {
@@ -94,6 +136,7 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, mut app: Ap
                         KeyCode::Char('c') => app.complete_selected_task(),
                         KeyCode::Char('r') => app.reopen_selected_task(),
                         KeyCode::Char('n') => app.start_new_task(),
+                        KeyCode::Char('h') => app.toggle_history_view(),
                         _ => {}
                     },
                 }
