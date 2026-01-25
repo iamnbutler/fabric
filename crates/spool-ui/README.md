@@ -16,6 +16,8 @@ spool-ui
 
 ## Keybindings
 
+### Task View
+
 | Key | Action |
 |-----|--------|
 | `j` / `k` | Navigate tasks (or scroll detail when focused) |
@@ -29,12 +31,27 @@ spool-ui
 | `s` | Cycle sort (Priority/Created/Title) |
 | `S` | Cycle stream filter |
 | `/` | Search |
+| `h` | Open history view |
+| `q` | Quit |
+
+### History View
+
+| Key | Action |
+|-----|--------|
+| `j` / `k` | Navigate events (or scroll detail when open) |
+| `g` / `G` | First / last event |
+| `l` / `Left` | Scroll columns horizontally |
+| `Enter` | Toggle detail panel |
+| `Tab` / `Shift-Tab` | Navigate events when detail is open |
+| `Esc` | Close detail / return to tasks |
+| `h` | Return to task view |
 | `q` | Quit |
 
 ## Features
 
 - Task list with priority coloring and status markers
 - Detail panel with full task info and event history
+- History view showing all events in reverse chronological order
 - Status filtering (open/complete/all)
 - Sorting (priority/created/title)
 - Search (title, description, tags)

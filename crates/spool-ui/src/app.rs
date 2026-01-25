@@ -5,6 +5,12 @@ use spool::state::{load_or_materialize_state, Stream, Task, TaskStatus};
 use spool::writer::{self, CreateTaskParams};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum View {
+    Tasks,
+    History,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Focus {
     TaskList,
     Detail,
@@ -86,6 +92,14 @@ pub struct App {
     pub search_query: String,
     pub search_mode: bool,
     pub task_events: Vec<Event>,
+    // View state
+    pub view: View,
+    pub history_events: Vec<Event>,
+    pub history_selected: usize,
+    pub history_scroll_x: u16,
+    pub history_show_detail: bool,
+    pub history_detail_scroll: u16,
+    pub all_tasks: std::collections::HashMap<String, Task>, // for name lookups
     ctx: SpoolContext,
 }
 
@@ -101,6 +115,8 @@ impl App {
             let name_b = streams.get(b).map(|s| s.name.as_str()).unwrap_or(b);
             name_a.to_lowercase().cmp(&name_b.to_lowercase())
         });
+
+        let all_tasks = state.tasks.clone();
 
         let mut tasks: Vec<Task> = state
             .tasks
@@ -133,6 +149,13 @@ impl App {
             search_query: String::new(),
             search_mode: false,
             task_events: Vec::new(),
+            view: View::Tasks,
+            history_events: Vec::new(),
+            history_selected: 0,
+            history_scroll_x: 0,
+            history_show_detail: false,
+            history_detail_scroll: 0,
+            all_tasks,
             ctx,
         })
     }
@@ -140,6 +163,7 @@ impl App {
     pub fn reload_tasks(&mut self) -> Result<()> {
         let state = load_or_materialize_state(&self.ctx)?;
         self.streams = state.streams.clone();
+        self.all_tasks = state.tasks.clone();
 
         // Update stream_ids list
         self.stream_ids = self.streams.keys().cloned().collect();
@@ -451,5 +475,91 @@ impl App {
 
     pub fn clear_message(&mut self) {
         self.message = None;
+    }
+
+    // History view methods
+
+    pub fn toggle_history_view(&mut self) {
+        match self.view {
+            View::Tasks => {
+                self.view = View::History;
+                let _ = self.load_history();
+            }
+            View::History => {
+                self.view = View::Tasks;
+            }
+        }
+    }
+
+    pub fn load_history(&mut self) -> Result<()> {
+        let events_by_task = spool::archive::collect_all_events(&self.ctx)?;
+        let mut all_events: Vec<Event> = events_by_task.into_values().flatten().collect();
+        // Sort by timestamp descending (most recent first)
+        all_events.sort_by(|a, b| b.ts.cmp(&a.ts));
+        self.history_events = all_events;
+        self.history_selected = 0;
+        Ok(())
+    }
+
+    pub fn history_next(&mut self) {
+        if !self.history_events.is_empty() {
+            self.history_selected = (self.history_selected + 1).min(self.history_events.len() - 1);
+        }
+    }
+
+    pub fn history_previous(&mut self) {
+        self.history_selected = self.history_selected.saturating_sub(1);
+    }
+
+    pub fn history_first(&mut self) {
+        self.history_selected = 0;
+    }
+
+    pub fn history_last(&mut self) {
+        if !self.history_events.is_empty() {
+            self.history_selected = self.history_events.len() - 1;
+        }
+    }
+
+    pub fn history_scroll_left(&mut self) {
+        self.history_scroll_x = self.history_scroll_x.saturating_sub(4);
+    }
+
+    pub fn history_scroll_right(&mut self) {
+        // Total row width: 16 + 40 + 17 + 14 + 20 + 24 = 131
+        // Cap scroll to show at least ~45 chars (branch + id columns)
+        const MAX_SCROLL: u16 = 87;
+        self.history_scroll_x = (self.history_scroll_x.saturating_add(4)).min(MAX_SCROLL);
+    }
+
+    pub fn get_task_title(&self, id: &str) -> Option<&str> {
+        self.all_tasks.get(id).map(|t| t.title.as_str())
+    }
+
+    pub fn toggle_history_detail(&mut self) {
+        self.history_show_detail = !self.history_show_detail;
+        self.history_detail_scroll = 0;
+    }
+
+    pub fn close_history_detail(&mut self) {
+        if self.history_show_detail {
+            self.history_show_detail = false;
+        }
+    }
+
+    pub fn history_detail_scroll_down(&mut self) {
+        self.history_detail_scroll = self.history_detail_scroll.saturating_add(1);
+    }
+
+    pub fn history_detail_scroll_up(&mut self) {
+        self.history_detail_scroll = self.history_detail_scroll.saturating_sub(1);
+    }
+
+    pub fn selected_history_event(&self) -> Option<&Event> {
+        self.history_events.get(self.history_selected)
+    }
+
+    pub fn get_task(&self, id: &str) -> Option<&Task> {
+        self.all_tasks.get(id)
     }
 }
