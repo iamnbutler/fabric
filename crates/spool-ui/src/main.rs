@@ -79,7 +79,7 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, mut app: Ap
                             if app.history_show_detail {
                                 app.close_history_detail();
                             } else {
-                                app.toggle_history_view();
+                                return Ok(());
                             }
                         }
                         KeyCode::Char('j') | KeyCode::Down => {
@@ -138,7 +138,13 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, mut app: Ap
                         KeyCode::Char('s') => app.cycle_sort(),
                         KeyCode::Char('S') => app.cycle_stream_filter(),
                         KeyCode::Char('/') => app.toggle_search(),
-                        KeyCode::Esc => app.clear_search(),
+                        KeyCode::Esc => {
+                            if app.search_query.is_empty() {
+                                return Ok(());
+                            } else {
+                                app.clear_search();
+                            }
+                        }
                         // Task editing
                         KeyCode::Char('c') => app.complete_selected_task(),
                         KeyCode::Char('r') => app.reopen_selected_task(),
