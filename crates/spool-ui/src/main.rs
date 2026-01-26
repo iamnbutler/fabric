@@ -5,7 +5,9 @@ use std::io;
 
 use anyhow::Result;
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
+    event::{
+        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind, KeyModifiers,
+    },
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -47,6 +49,11 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, mut app: Ap
 
         if let Event::Key(key) = event::read()? {
             if key.kind == KeyEventKind::Press {
+                // Ctrl+C quits from any mode
+                if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
+                    return Ok(());
+                }
+
                 // Clear message on any keypress
                 app.clear_message();
 
