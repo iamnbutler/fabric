@@ -491,9 +491,7 @@ fn draw_streams(f: &mut Frame, area: Rect, app: &App) {
         .map(|(i, stream_id)| {
             let stream = app.streams.get(stream_id);
             let name = stream.map(|s| s.name.as_str()).unwrap_or(stream_id);
-            let desc = stream
-                .and_then(|s| s.description.as_deref())
-                .unwrap_or("");
+            let desc = stream.and_then(|s| s.description.as_deref()).unwrap_or("");
 
             // Count tasks in this stream
             let task_count = app
@@ -976,17 +974,19 @@ fn draw_help_overlay(f: &mut Frame) {
                 .add_modifier(Modifier::BOLD),
         )]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Navigation", Style::default().add_modifier(Modifier::BOLD)),
-        ]),
+        Line::from(vec![Span::styled(
+            "Navigation",
+            Style::default().add_modifier(Modifier::BOLD),
+        )]),
         Line::from("  j/k, ↑/↓     Move up/down"),
         Line::from("  g/G          Jump to first/last"),
         Line::from("  [/], ⌥←/→    Previous/next view"),
         Line::from("  Tab          Toggle detail panel"),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Tasks", Style::default().add_modifier(Modifier::BOLD)),
-        ]),
+        Line::from(vec![Span::styled(
+            "Tasks",
+            Style::default().add_modifier(Modifier::BOLD),
+        )]),
         Line::from("  n            New task"),
         Line::from("  c            Complete task"),
         Line::from("  r            Reopen task"),
@@ -994,16 +994,18 @@ fn draw_help_overlay(f: &mut Frame) {
         Line::from("  o            Cycle sort order"),
         Line::from("  /            Search"),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Streams", Style::default().add_modifier(Modifier::BOLD)),
-        ]),
+        Line::from(vec![Span::styled(
+            "Streams",
+            Style::default().add_modifier(Modifier::BOLD),
+        )]),
         Line::from("  n            New stream"),
         Line::from("  d            Delete stream"),
         Line::from("  Enter        View stream tasks"),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("General", Style::default().add_modifier(Modifier::BOLD)),
-        ]),
+        Line::from(vec![Span::styled(
+            "General",
+            Style::default().add_modifier(Modifier::BOLD),
+        )]),
         Line::from("  s            Streams view"),
         Line::from("  h            History view"),
         Line::from("  q            Quit"),
@@ -1032,7 +1034,10 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
         InputMode::NewTask | InputMode::NewStream => (" Enter:create  Esc:cancel", ""),
         InputMode::Normal if app.search_mode => (" Type to search  Enter/Esc:close", ""),
         InputMode::Normal => match app.view {
-            View::Tasks => (" n:new  c:complete  r:reopen  v:view  o:sort", "?:shortcuts"),
+            View::Tasks => (
+                " n:new  c:complete  r:reopen  v:view  o:sort",
+                "?:shortcuts",
+            ),
             View::Streams => (" n:new  d:delete  Enter:select", "?:shortcuts"),
             View::History => {
                 if app.history_show_detail {

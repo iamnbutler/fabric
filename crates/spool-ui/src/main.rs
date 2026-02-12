@@ -86,7 +86,10 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, mut app: Ap
                 }
 
                 // Help toggle works globally
-                if key.code == KeyCode::Char('?') && app.input_mode == InputMode::Normal && !app.search_mode {
+                if key.code == KeyCode::Char('?')
+                    && app.input_mode == InputMode::Normal
+                    && !app.search_mode
+                {
                     app.toggle_help();
                     continue;
                 }

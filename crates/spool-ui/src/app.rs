@@ -580,7 +580,7 @@ impl App {
             Ok(id) => {
                 self.message = Some(format!("Created stream: {}", self.input_buffer.trim()));
                 let _ = self.reload_tasks(); // This also reloads streams
-                // Select the new stream
+                                             // Select the new stream
                 if let Some(pos) = self.stream_ids.iter().position(|s| s == &id) {
                     self.streams_selected = pos;
                 }
@@ -619,7 +619,10 @@ impl App {
                 .unwrap_or_else(|| stream_id.clone());
 
             self.pending_delete_stream = Some(stream_id);
-            self.message = Some(format!("Delete \"{}\"? Press d again to confirm", stream_name));
+            self.message = Some(format!(
+                "Delete \"{}\"? Press d again to confirm",
+                stream_name
+            ));
         }
     }
 
