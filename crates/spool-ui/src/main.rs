@@ -100,6 +100,28 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, mut app: Ap
                     continue;
                 }
 
+                // Command palette handling
+                if app.show_command_palette {
+                    match key.code {
+                        KeyCode::Esc => app.show_command_palette = false,
+                        KeyCode::Char('j') | KeyCode::Down => app.command_next(),
+                        KeyCode::Char('k') | KeyCode::Up => app.command_previous(),
+                        KeyCode::Enter => app.execute_selected_command(),
+                        KeyCode::Char(':') => app.show_command_palette = false,
+                        _ => {}
+                    }
+                    continue;
+                }
+
+                // Command palette toggle (: like vim)
+                if key.code == KeyCode::Char(':')
+                    && app.input_mode == InputMode::Normal
+                    && !app.search_mode
+                {
+                    app.toggle_command_palette();
+                    continue;
+                }
+
                 match app.input_mode {
                     InputMode::NewTask => match key.code {
                         KeyCode::Esc => app.cancel_input(),

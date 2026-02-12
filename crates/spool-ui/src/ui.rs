@@ -70,9 +70,12 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         draw_footer(f, chunks[2], app);
     }
 
-    // Draw help overlay on top if shown
+    // Draw overlays on top
     if app.show_help {
         draw_help_overlay(f);
+    }
+    if app.show_command_palette {
+        draw_command_palette(f, app);
     }
 }
 
@@ -1008,6 +1011,7 @@ fn draw_help_overlay(f: &mut Frame) {
         )]),
         Line::from("  s            Streams view"),
         Line::from("  h            History view"),
+        Line::from("  :            Command palette"),
         Line::from("  q            Quit"),
         Line::from("  Esc          Back / Quit"),
         Line::from(""),
@@ -1029,6 +1033,48 @@ fn draw_help_overlay(f: &mut Frame) {
     f.render_widget(help, popup_area);
 }
 
+fn draw_command_palette(f: &mut Frame, app: &App) {
+    use crate::app::Command;
+
+    let area = f.area();
+
+    // Calculate centered popup area (smaller than help)
+    let popup_width = 35.min(area.width.saturating_sub(4));
+    let popup_height = 7.min(area.height.saturating_sub(4));
+    let popup_x = (area.width.saturating_sub(popup_width)) / 2;
+    let popup_y = (area.height.saturating_sub(popup_height)) / 2;
+
+    let popup_area = Rect::new(popup_x, popup_y, popup_width, popup_height);
+
+    // Clear the area behind the popup
+    f.render_widget(ratatui::widgets::Clear, popup_area);
+
+    let commands = Command::all();
+    let items: Vec<ListItem> = commands
+        .iter()
+        .enumerate()
+        .map(|(i, cmd)| {
+            let style = if i == app.command_selected {
+                Style::default()
+                    .bg(Color::DarkGray)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default()
+            };
+            ListItem::new(format!("  {}", cmd.label())).style(style)
+        })
+        .collect();
+
+    let list = List::new(items).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::Yellow))
+            .title(" Commands "),
+    );
+
+    f.render_widget(list, popup_area);
+}
+
 fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
     let (left_help, right_help) = match app.input_mode {
         InputMode::NewTask | InputMode::NewStream => (" Enter:create  Esc:cancel", ""),
@@ -1036,14 +1082,14 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
         InputMode::Normal => match app.view {
             View::Tasks => (
                 " n:new  c:complete  r:reopen  v:view  o:sort",
-                "?:shortcuts",
+                "::commands  ?:shortcuts",
             ),
-            View::Streams => (" n:new  d:delete  Enter:select", "?:shortcuts"),
+            View::Streams => (" n:new  d:delete  Enter:select", "::commands  ?:shortcuts"),
             View::History => {
                 if app.history_show_detail {
-                    (" j/k:scroll  Esc:close", "?:shortcuts")
+                    (" j/k:scroll  Esc:close", "::commands  ?:shortcuts")
                 } else {
-                    (" j/k:nav  Enter:detail", "?:shortcuts")
+                    (" j/k:nav  Enter:detail", "::commands  ?:shortcuts")
                 }
             }
         },
