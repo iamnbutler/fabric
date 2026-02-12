@@ -77,39 +77,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 }
 
 fn draw_header(f: &mut Frame, area: Rect, app: &App) {
-    // Build left side content
-    let left_content = match app.view {
-        View::Tasks => {
-            let search_indicator = if !app.search_query.is_empty() {
-                format!("  \"{}\"", app.search_query)
-            } else {
-                String::new()
-            };
-
-            let stream_indicator = if app.stream_filter.is_some() {
-                format!("  stream: {}", app.stream_filter_label())
-            } else {
-                String::new()
-            };
-
-            format!(
-                " spool  {} tasks  [{}]  sort: {}{}{}",
-                app.tasks.len(),
-                app.status_filter.label(),
-                app.sort_by.label(),
-                stream_indicator,
-                search_indicator,
-            )
-        }
-        View::Streams => {
-            format!(" spool  {} streams", app.stream_ids.len())
-        }
-        View::History => {
-            format!(" spool  {} events", app.history_events.len())
-        }
-    };
-
-    // Build nav tabs for right side
+    // Build nav tabs
     let nav_style_active = Style::default()
         .fg(Color::Cyan)
         .add_modifier(Modifier::BOLD);
@@ -131,21 +99,47 @@ fn draw_header(f: &mut Frame, area: Rect, app: &App) {
         nav_style_inactive
     };
 
-    // Calculate padding to right-align nav
-    let nav_text = "tasks  streams  history ";
-    let left_len = left_content.chars().count();
-    let nav_len = nav_text.chars().count();
+    // Build right side status info
+    let right_content = match app.view {
+        View::Tasks => {
+            let mut parts = vec![format!("{} tasks", app.tasks.len())];
+            parts.push(format!("[{}]", app.status_filter.label()));
+            parts.push(format!("sort: {}", app.sort_by.label()));
+            if app.stream_filter.is_some() {
+                parts.push(format!("stream: {}", app.stream_filter_label()));
+            }
+            if !app.search_query.is_empty() {
+                parts.push(format!("\"{}\"", app.search_query));
+            }
+            parts.join("  ")
+        }
+        View::Streams => format!("{} streams", app.stream_ids.len()),
+        View::History => format!("{} events", app.history_events.len()),
+    };
+
+    // Calculate padding
+    let left_text = " spool  tasks  streams  history";
+    let left_len = left_text.chars().count();
+    let right_len = right_content.chars().count() + 1; // +1 for trailing space
     let total_width = area.width as usize;
-    let padding = total_width.saturating_sub(left_len + nav_len);
+    let padding = total_width.saturating_sub(left_len + right_len);
 
     let line = Line::from(vec![
-        Span::styled(left_content, Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-        Span::raw(" ".repeat(padding)),
+        Span::styled(
+            " spool",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::raw("  "),
         Span::styled("tasks", tasks_style),
         Span::styled("  ", nav_style_inactive),
         Span::styled("streams", streams_style),
         Span::styled("  ", nav_style_inactive),
-        Span::styled("history ", history_style),
+        Span::styled("history", history_style),
+        Span::raw(" ".repeat(padding)),
+        Span::styled(right_content, Style::default().fg(Color::DarkGray)),
+        Span::raw(" "),
     ]);
 
     let header = Paragraph::new(line);

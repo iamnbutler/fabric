@@ -79,8 +79,11 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, mut app: Ap
                     }
                 }
 
-                // Clear message on any keypress
-                app.clear_message();
+                // Clear message on any keypress (except Esc when pending quit)
+                let is_esc = key.code == KeyCode::Esc;
+                if !(is_esc && app.pending_quit) {
+                    app.clear_message();
+                }
 
                 // Help toggle works globally
                 if key.code == KeyCode::Char('?') && app.input_mode == InputMode::Normal && !app.search_mode {
