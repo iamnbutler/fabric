@@ -38,7 +38,8 @@ fn operation_color(op: &str) -> Color {
 pub fn draw(f: &mut Frame, app: &mut App) {
     // Determine if we need a message/input bar
     let has_message = app.message.is_some();
-    let in_input_mode = app.input_mode == InputMode::NewTask;
+    let in_input_mode =
+        app.input_mode == InputMode::NewTask || app.input_mode == InputMode::NewStream;
     let show_bar = has_message || in_input_mode;
 
     let chunks = Layout::default()
@@ -68,42 +69,80 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     } else {
         draw_footer(f, chunks[2], app);
     }
+
+    // Draw help overlay on top if shown
+    if app.show_help {
+        draw_help_overlay(f);
+    }
 }
 
 fn draw_header(f: &mut Frame, area: Rect, app: &App) {
-    let title = match app.view {
-        View::Tasks => {
-            let search_indicator = if !app.search_query.is_empty() {
-                format!("  \"{}\"", app.search_query)
-            } else {
-                String::new()
-            };
+    // Build nav tabs
+    let nav_style_active = Style::default()
+        .fg(Color::Cyan)
+        .add_modifier(Modifier::BOLD);
+    let nav_style_inactive = Style::default().fg(Color::DarkGray);
 
-            let stream_indicator = if app.stream_filter.is_some() {
-                format!("  stream: {}", app.stream_filter_label())
-            } else {
-                String::new()
-            };
-
-            format!(
-                " spool  {} tasks  [{}]  sort: {}{}{}",
-                app.tasks.len(),
-                app.status_filter.label(),
-                app.sort_by.label(),
-                stream_indicator,
-                search_indicator,
-            )
-        }
-        View::History => {
-            format!(" spool  History  {} events", app.history_events.len())
-        }
+    let tasks_style = if app.view == View::Tasks {
+        nav_style_active
+    } else {
+        nav_style_inactive
+    };
+    let streams_style = if app.view == View::Streams {
+        nav_style_active
+    } else {
+        nav_style_inactive
+    };
+    let history_style = if app.view == View::History {
+        nav_style_active
+    } else {
+        nav_style_inactive
     };
 
-    let header = Paragraph::new(title).style(
-        Style::default()
-            .fg(Color::Cyan)
-            .add_modifier(Modifier::BOLD),
-    );
+    // Build right side status info
+    let right_content = match app.view {
+        View::Tasks => {
+            let mut parts = vec![format!("{} tasks", app.tasks.len())];
+            parts.push(format!("[{}]", app.status_filter.label()));
+            parts.push(format!("sort: {}", app.sort_by.label()));
+            if app.stream_filter.is_some() {
+                parts.push(format!("stream: {}", app.stream_filter_label()));
+            }
+            if !app.search_query.is_empty() {
+                parts.push(format!("\"{}\"", app.search_query));
+            }
+            parts.join("  ")
+        }
+        View::Streams => format!("{} streams", app.stream_ids.len()),
+        View::History => format!("{} events", app.history_events.len()),
+    };
+
+    // Calculate padding
+    let left_text = " spool  tasks  streams  history";
+    let left_len = left_text.chars().count();
+    let right_len = right_content.chars().count() + 1; // +1 for trailing space
+    let total_width = area.width as usize;
+    let padding = total_width.saturating_sub(left_len + right_len);
+
+    let line = Line::from(vec![
+        Span::styled(
+            " spool",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::raw("  "),
+        Span::styled("tasks", tasks_style),
+        Span::styled("  ", nav_style_inactive),
+        Span::styled("streams", streams_style),
+        Span::styled("  ", nav_style_inactive),
+        Span::styled("history", history_style),
+        Span::raw(" ".repeat(padding)),
+        Span::styled(right_content, Style::default().fg(Color::DarkGray)),
+        Span::raw(" "),
+    ]);
+
+    let header = Paragraph::new(line);
     f.render_widget(header, area);
 }
 
@@ -122,6 +161,9 @@ fn draw_main(f: &mut Frame, area: Rect, app: &mut App) {
                 draw_task_list(f, area, app);
             }
         }
+        View::Streams => {
+            draw_streams(f, area, app);
+        }
         View::History => {
             draw_history(f, area, app);
         }
@@ -129,6 +171,36 @@ fn draw_main(f: &mut Frame, area: Rect, app: &mut App) {
 }
 
 fn draw_task_list(f: &mut Frame, area: Rect, app: &mut App) {
+    // Only show stream column when not filtering by a specific stream
+    let show_stream_col = app.stream_filter.is_none();
+
+    let border_style = if app.focus == Focus::TaskList {
+        Style::default().fg(Color::Cyan)
+    } else {
+        Style::default().fg(Color::DarkGray)
+    };
+
+    let title = if app.search_mode {
+        format!(" Tasks  /{}▌", app.search_query)
+    } else {
+        " Tasks ".to_string()
+    };
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(border_style)
+        .title(title);
+
+    // Handle empty state
+    if app.tasks.is_empty() {
+        let empty_message = build_empty_tasks_message(app);
+        let paragraph = Paragraph::new(empty_message)
+            .block(block)
+            .style(Style::default().fg(Color::DarkGray));
+        f.render_widget(paragraph, area);
+        return;
+    }
+
     let items: Vec<ListItem> = app
         .tasks
         .iter()
@@ -148,12 +220,30 @@ fn draw_task_list(f: &mut Frame, area: Rect, app: &mut App) {
                 .map(|a| format!(" {}", a))
                 .unwrap_or_default();
 
-            let line = Line::from(vec![
+            let mut spans = vec![
                 Span::styled(status_marker, Style::default().fg(Color::Green)),
                 Span::styled(format!("{:4} ", priority), pstyle),
                 Span::raw(&task.title),
-                Span::styled(assignee, Style::default().fg(Color::DarkGray)),
-            ]);
+            ];
+
+            // Add stream column after title if showing
+            if show_stream_col {
+                if let Some(stream_name) = task
+                    .stream
+                    .as_ref()
+                    .and_then(|id| app.get_stream(id))
+                    .map(|s| s.name.as_str())
+                {
+                    spans.push(Span::styled(
+                        format!("  {}", truncate_str(stream_name, 14)),
+                        Style::default().fg(Color::Blue),
+                    ));
+                }
+            }
+
+            spans.push(Span::styled(assignee, Style::default().fg(Color::DarkGray)));
+
+            let line = Line::from(spans);
 
             let style = if i == app.selected {
                 Style::default()
@@ -167,26 +257,75 @@ fn draw_task_list(f: &mut Frame, area: Rect, app: &mut App) {
         })
         .collect();
 
-    let border_style = if app.focus == Focus::TaskList {
-        Style::default().fg(Color::Cyan)
-    } else {
-        Style::default().fg(Color::DarkGray)
-    };
-
-    let title = if app.search_mode {
-        format!(" Tasks  /{}▌", app.search_query)
-    } else {
-        " Tasks ".to_string()
-    };
-
-    let list = List::new(items).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .border_style(border_style)
-            .title(title),
-    );
-
+    let list = List::new(items).block(block);
     f.render_widget(list, area);
+}
+
+fn build_empty_tasks_message(app: &App) -> Line<'static> {
+    use crate::app::StatusFilter;
+
+    // Count tasks by status
+    let open_count = app
+        .all_tasks
+        .values()
+        .filter(|t| t.status == spool::state::TaskStatus::Open)
+        .count();
+    let complete_count = app
+        .all_tasks
+        .values()
+        .filter(|t| t.status == spool::state::TaskStatus::Complete)
+        .count();
+    let total = app.all_tasks.len();
+
+    // Build contextual message
+    let (status_text, other_count, hint) = match app.status_filter {
+        StatusFilter::Open => ("open", complete_count, "v to toggle"),
+        StatusFilter::Complete => ("completed", open_count, "v to toggle"),
+        StatusFilter::All => ("", 0, "n to create"),
+    };
+
+    if total == 0 {
+        return Line::from(" No tasks yet - n to create");
+    }
+
+    if !app.search_query.is_empty() {
+        return Line::from(format!(
+            " No matches for \"{}\" - Esc to clear",
+            app.search_query
+        ));
+    }
+
+    if app.stream_filter.is_some() {
+        let stream_name = app.stream_filter_label();
+        return Line::from(format!(
+            " No {} tasks in {} ({} {}) - {}",
+            status_text,
+            stream_name,
+            other_count,
+            if app.status_filter == StatusFilter::Open {
+                "completed"
+            } else {
+                "open"
+            },
+            hint
+        ));
+    }
+
+    if app.status_filter == StatusFilter::All {
+        Line::from(" No tasks yet - n to create")
+    } else {
+        Line::from(format!(
+            " No {} tasks ({} {}) - {}",
+            status_text,
+            other_count,
+            if app.status_filter == StatusFilter::Open {
+                "completed"
+            } else {
+                "open"
+            },
+            hint
+        ))
+    }
 }
 
 fn draw_task_detail(f: &mut Frame, area: Rect, app: &mut App) {
@@ -327,6 +466,68 @@ fn draw_task_detail(f: &mut Frame, area: Rect, app: &mut App) {
     // Set after content is consumed
     app.detail_content_height = content_height;
     app.detail_visible_height = visible_height;
+}
+
+fn draw_streams(f: &mut Frame, area: Rect, app: &App) {
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Cyan))
+        .title(format!(" Streams ({}) ", app.stream_ids.len()));
+
+    // Handle empty state
+    if app.stream_ids.is_empty() {
+        let message = Line::from(" No streams yet - use CLI: spool stream add <name>");
+        let paragraph = Paragraph::new(message)
+            .block(block)
+            .style(Style::default().fg(Color::DarkGray));
+        f.render_widget(paragraph, area);
+        return;
+    }
+
+    let items: Vec<ListItem> = app
+        .stream_ids
+        .iter()
+        .enumerate()
+        .map(|(i, stream_id)| {
+            let stream = app.streams.get(stream_id);
+            let name = stream.map(|s| s.name.as_str()).unwrap_or(stream_id);
+            let desc = stream.and_then(|s| s.description.as_deref()).unwrap_or("");
+
+            // Count tasks in this stream
+            let task_count = app
+                .all_tasks
+                .values()
+                .filter(|t| t.stream.as_ref() == Some(stream_id))
+                .count();
+
+            let line = Line::from(vec![
+                Span::styled(
+                    format!("{:20} ", truncate_str(name, 19)),
+                    Style::default()
+                        .fg(Color::Blue)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    format!("{:4} tasks  ", task_count),
+                    Style::default().fg(Color::DarkGray),
+                ),
+                Span::styled(truncate_str(desc, 40), Style::default().fg(Color::White)),
+            ]);
+
+            let style = if i == app.streams_selected {
+                Style::default()
+                    .bg(Color::DarkGray)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default()
+            };
+
+            ListItem::new(line).style(style)
+        })
+        .collect();
+
+    let list = List::new(items).block(block);
+    f.render_widget(list, area);
 }
 
 fn draw_history(f: &mut Frame, area: Rect, app: &App) {
@@ -664,6 +865,16 @@ fn draw_history_detail(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(detail, area);
 }
 
+/// Truncates string to max length, adding `~` if truncated.
+fn truncate_str(s: &str, max_len: usize) -> String {
+    if s.chars().count() > max_len {
+        let truncated: String = s.chars().take(max_len.saturating_sub(1)).collect();
+        format!("{}~", truncated)
+    } else {
+        s.to_string()
+    }
+}
+
 /// Pads or truncates string to exact width. Truncated strings end with `~`.
 fn fixed_width(s: &str, width: usize) -> String {
     let char_count = s.chars().count();
@@ -714,42 +925,142 @@ fn build_scrolled_spans(columns: &[(String, Style)], scroll_x: usize) -> Vec<Spa
 }
 
 fn draw_input_bar(f: &mut Frame, area: Rect, app: &App) {
-    let content = if app.input_mode == InputMode::NewTask {
-        Line::from(vec![
+    let content = match app.input_mode {
+        InputMode::NewTask => Line::from(vec![
             Span::styled(" New task: ", Style::default().fg(Color::Cyan)),
             Span::raw(&app.input_buffer),
             Span::styled("▌", Style::default().fg(Color::Cyan)),
-        ])
-    } else if let Some(msg) = &app.message {
-        Line::from(vec![Span::styled(
-            format!(" {}", msg),
-            Style::default().fg(Color::Yellow),
-        )])
-    } else {
-        Line::from("")
+        ]),
+        InputMode::NewStream => Line::from(vec![
+            Span::styled(" New stream: ", Style::default().fg(Color::Cyan)),
+            Span::raw(&app.input_buffer),
+            Span::styled("▌", Style::default().fg(Color::Cyan)),
+        ]),
+        InputMode::Normal => {
+            if let Some(msg) = &app.message {
+                Line::from(vec![Span::styled(
+                    format!(" {}", msg),
+                    Style::default().fg(Color::Yellow),
+                )])
+            } else {
+                Line::from("")
+            }
+        }
     };
 
     let bar = Paragraph::new(content);
     f.render_widget(bar, area);
 }
 
+fn draw_help_overlay(f: &mut Frame) {
+    let area = f.area();
+
+    // Calculate centered popup area
+    let popup_width = 50.min(area.width.saturating_sub(4));
+    let popup_height = 20.min(area.height.saturating_sub(4));
+    let popup_x = (area.width.saturating_sub(popup_width)) / 2;
+    let popup_y = (area.height.saturating_sub(popup_height)) / 2;
+
+    let popup_area = Rect::new(popup_x, popup_y, popup_width, popup_height);
+
+    // Clear the area behind the popup
+    f.render_widget(ratatui::widgets::Clear, popup_area);
+
+    let help_text = vec![
+        Line::from(vec![Span::styled(
+            "Keyboard Shortcuts",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(""),
+        Line::from(vec![Span::styled(
+            "Navigation",
+            Style::default().add_modifier(Modifier::BOLD),
+        )]),
+        Line::from("  j/k, ↑/↓     Move up/down"),
+        Line::from("  g/G          Jump to first/last"),
+        Line::from("  [/], ⌥←/→    Previous/next view"),
+        Line::from("  Tab          Toggle detail panel"),
+        Line::from(""),
+        Line::from(vec![Span::styled(
+            "Tasks",
+            Style::default().add_modifier(Modifier::BOLD),
+        )]),
+        Line::from("  n            New task"),
+        Line::from("  c            Complete task"),
+        Line::from("  r            Reopen task"),
+        Line::from("  v            Cycle status filter"),
+        Line::from("  o            Cycle sort order"),
+        Line::from("  /            Search"),
+        Line::from(""),
+        Line::from(vec![Span::styled(
+            "Streams",
+            Style::default().add_modifier(Modifier::BOLD),
+        )]),
+        Line::from("  n            New stream"),
+        Line::from("  d            Delete stream"),
+        Line::from("  Enter        View stream tasks"),
+        Line::from(""),
+        Line::from(vec![Span::styled(
+            "General",
+            Style::default().add_modifier(Modifier::BOLD),
+        )]),
+        Line::from("  s            Streams view"),
+        Line::from("  h            History view"),
+        Line::from("  q            Quit"),
+        Line::from("  Esc          Back / Quit"),
+        Line::from(""),
+        Line::from(vec![Span::styled(
+            "Press any key to close",
+            Style::default().fg(Color::DarkGray),
+        )]),
+    ];
+
+    let help = Paragraph::new(help_text)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::Cyan))
+                .title(" Help "),
+        )
+        .wrap(Wrap { trim: false });
+
+    f.render_widget(help, popup_area);
+}
+
 fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
-    let help = match app.input_mode {
-        InputMode::NewTask => " Enter:create  Esc:cancel ",
-        InputMode::Normal if app.search_mode => " Type to search, Enter/Esc to close ",
+    let (left_help, right_help) = match app.input_mode {
+        InputMode::NewTask | InputMode::NewStream => (" Enter:create  Esc:cancel", ""),
+        InputMode::Normal if app.search_mode => (" Type to search  Enter/Esc:close", ""),
         InputMode::Normal => match app.view {
-            View::Tasks => {
-                " q:quit  j/k:nav  c:complete  r:reopen  n:new  v:view  s:sort  /:search  h:history "
-            }
+            View::Tasks => (
+                " n:new  c:complete  r:reopen  v:view  o:sort",
+                "?:shortcuts",
+            ),
+            View::Streams => (" n:new  d:delete  Enter:select", "?:shortcuts"),
             View::History => {
                 if app.history_show_detail {
-                    " q:quit  j/k:scroll  Tab/Shift-Tab:nav  Esc:close  h:back "
+                    (" j/k:scroll  Esc:close", "?:shortcuts")
                 } else {
-                    " q:quit  j/k:nav  l/left:scroll  Enter:detail  h:back "
+                    (" j/k:nav  Enter:detail", "?:shortcuts")
                 }
             }
         },
     };
-    let footer = Paragraph::new(help).style(Style::default().fg(Color::DarkGray));
+
+    // Calculate padding for right-aligned help
+    let left_len = left_help.chars().count();
+    let right_len = right_help.chars().count();
+    let total_width = area.width as usize;
+    let padding = total_width.saturating_sub(left_len + right_len);
+
+    let line = Line::from(vec![
+        Span::styled(left_help, Style::default().fg(Color::DarkGray)),
+        Span::raw(" ".repeat(padding)),
+        Span::styled(right_help, Style::default().fg(Color::DarkGray)),
+    ]);
+
+    let footer = Paragraph::new(line);
     f.render_widget(footer, area);
 }

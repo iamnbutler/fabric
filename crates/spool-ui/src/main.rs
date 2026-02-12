@@ -54,13 +54,63 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, mut app: Ap
                     return Ok(());
                 }
 
-                // Clear message on any keypress
-                app.clear_message();
+                // Global view navigation (Option+Arrow or [/])
+                // Skip if in input mode
+                if app.input_mode == InputMode::Normal && !app.search_mode {
+                    let is_alt = key.modifiers.contains(KeyModifiers::ALT);
+                    match key.code {
+                        KeyCode::Right if is_alt => {
+                            app.next_view();
+                            continue;
+                        }
+                        KeyCode::Left if is_alt => {
+                            app.previous_view();
+                            continue;
+                        }
+                        KeyCode::Char(']') => {
+                            app.next_view();
+                            continue;
+                        }
+                        KeyCode::Char('[') => {
+                            app.previous_view();
+                            continue;
+                        }
+                        _ => {}
+                    }
+                }
+
+                // Clear message on any keypress (except Esc when pending quit)
+                let is_esc = key.code == KeyCode::Esc;
+                if !(is_esc && app.pending_quit) {
+                    app.clear_message();
+                }
+
+                // Help toggle works globally
+                if key.code == KeyCode::Char('?')
+                    && app.input_mode == InputMode::Normal
+                    && !app.search_mode
+                {
+                    app.toggle_help();
+                    continue;
+                }
+
+                // Close help with any key if open
+                if app.show_help {
+                    app.show_help = false;
+                    continue;
+                }
 
                 match app.input_mode {
                     InputMode::NewTask => match key.code {
                         KeyCode::Esc => app.cancel_input(),
                         KeyCode::Enter => app.submit_new_task(),
+                        KeyCode::Backspace => app.input_backspace(),
+                        KeyCode::Char(c) => app.input_char(c),
+                        _ => {}
+                    },
+                    InputMode::NewStream => match key.code {
+                        KeyCode::Esc => app.cancel_input(),
+                        KeyCode::Enter => app.submit_new_stream(),
                         KeyCode::Backspace => app.input_backspace(),
                         KeyCode::Char(c) => app.input_char(c),
                         _ => {}
@@ -78,7 +128,7 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, mut app: Ap
                         KeyCode::Esc => {
                             if app.history_show_detail {
                                 app.close_history_detail();
-                            } else {
+                            } else if app.request_quit() {
                                 return Ok(());
                             }
                         }
@@ -114,6 +164,24 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, mut app: Ap
                         }
                         _ => {}
                     },
+                    InputMode::Normal if app.view == View::Streams => match key.code {
+                        KeyCode::Char('q') => return Ok(()),
+                        KeyCode::Char('j') | KeyCode::Down => app.streams_next(),
+                        KeyCode::Char('k') | KeyCode::Up => app.streams_previous(),
+                        KeyCode::Char('g') => app.streams_first(),
+                        KeyCode::Char('G') => app.streams_last(),
+                        KeyCode::Enter => app.select_current_stream(),
+                        KeyCode::Char('n') => app.start_new_stream(),
+                        KeyCode::Char('d') => {
+                            if app.pending_delete_stream.is_some() {
+                                app.confirm_delete_stream();
+                            } else {
+                                app.request_delete_stream();
+                            }
+                        }
+                        KeyCode::Esc | KeyCode::Char('s') => app.toggle_streams_view(),
+                        _ => {}
+                    },
                     InputMode::Normal => match key.code {
                         KeyCode::Char('q') => return Ok(()),
                         KeyCode::Char('j') | KeyCode::Down => {
@@ -135,14 +203,17 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, mut app: Ap
                         KeyCode::Tab => app.toggle_focus(),
                         KeyCode::Enter => app.toggle_detail(),
                         KeyCode::Char('v') => app.cycle_status_filter(),
-                        KeyCode::Char('s') => app.cycle_sort(),
-                        KeyCode::Char('S') => app.cycle_stream_filter(),
+                        KeyCode::Char('o') => app.cycle_sort(),
+                        KeyCode::Char('s') => app.toggle_streams_view(),
                         KeyCode::Char('/') => app.toggle_search(),
                         KeyCode::Esc => {
-                            if app.search_query.is_empty() {
-                                return Ok(());
-                            } else {
+                            if !app.search_query.is_empty() {
                                 app.clear_search();
+                            } else if app.stream_filter.is_some() {
+                                app.stream_filter = None;
+                                let _ = app.reload_tasks();
+                            } else if app.request_quit() {
+                                return Ok(());
                             }
                         }
                         // Task editing

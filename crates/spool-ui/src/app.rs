@@ -7,6 +7,7 @@ use spool::writer::{self, CreateTaskParams};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum View {
     Tasks,
+    Streams,
     History,
 }
 
@@ -70,6 +71,7 @@ impl SortBy {
 pub enum InputMode {
     Normal,
     NewTask,
+    NewStream,
 }
 
 pub struct App {
@@ -77,6 +79,9 @@ pub struct App {
     pub input_mode: InputMode,
     pub input_buffer: String,
     pub message: Option<String>,
+    pub pending_quit: bool,
+    pub show_help: bool,
+    pub pending_delete_stream: Option<String>, // stream ID pending deletion
     pub detail_scroll: u16,
     pub detail_content_height: u16, // set by UI during render
     pub detail_visible_height: u16, // set by UI during render
@@ -94,6 +99,9 @@ pub struct App {
     pub task_events: Vec<Event>,
     // View state
     pub view: View,
+    // Streams view state
+    pub streams_selected: usize,
+    // History view state
     pub history_events: Vec<Event>,
     pub history_selected: usize,
     pub history_scroll_x: u16,
@@ -134,6 +142,9 @@ impl App {
             input_mode: InputMode::Normal,
             input_buffer: String::new(),
             message: None,
+            pending_quit: false,
+            show_help: false,
+            pending_delete_stream: None,
             detail_scroll: 0,
             detail_content_height: 0,
             detail_visible_height: 0,
@@ -150,6 +161,7 @@ impl App {
             search_mode: false,
             task_events: Vec::new(),
             view: View::Tasks,
+            streams_selected: 0,
             history_events: Vec::new(),
             history_selected: 0,
             history_scroll_x: 0,
@@ -347,26 +359,6 @@ impl App {
         let _ = self.reload_tasks();
     }
 
-    pub fn cycle_stream_filter(&mut self) {
-        if self.stream_ids.is_empty() {
-            return;
-        }
-
-        self.stream_filter = match &self.stream_filter {
-            None => Some(self.stream_ids[0].clone()),
-            Some(current) => {
-                let idx = self.stream_ids.iter().position(|id| id == current);
-                match idx {
-                    Some(i) if i + 1 < self.stream_ids.len() => {
-                        Some(self.stream_ids[i + 1].clone())
-                    }
-                    _ => None, // wrap back to "All"
-                }
-            }
-        };
-        let _ = self.reload_tasks();
-    }
-
     pub fn stream_filter_label(&self) -> String {
         match &self.stream_filter {
             None => "All".to_string(),
@@ -475,13 +467,192 @@ impl App {
 
     pub fn clear_message(&mut self) {
         self.message = None;
+        self.pending_quit = false;
+        self.pending_delete_stream = None;
+    }
+
+    pub fn toggle_help(&mut self) {
+        self.show_help = !self.show_help;
+    }
+
+    /// Returns true if should quit, false if showing confirmation
+    pub fn request_quit(&mut self) -> bool {
+        if self.pending_quit {
+            true
+        } else {
+            self.pending_quit = true;
+            self.message = Some("Press Esc again to quit".to_string());
+            false
+        }
+    }
+
+    // View navigation methods
+
+    pub fn next_view(&mut self) {
+        self.view = match self.view {
+            View::Tasks => View::Streams,
+            View::Streams => View::History,
+            View::History => View::Tasks,
+        };
+        self.on_view_change();
+    }
+
+    pub fn previous_view(&mut self) {
+        self.view = match self.view {
+            View::Tasks => View::History,
+            View::History => View::Streams,
+            View::Streams => View::Tasks,
+        };
+        self.on_view_change();
+    }
+
+    fn on_view_change(&mut self) {
+        match self.view {
+            View::Tasks => {}
+            View::Streams => {
+                self.streams_selected = 0;
+            }
+            View::History => {
+                let _ = self.load_history();
+            }
+        }
+    }
+
+    // Streams view methods
+
+    pub fn toggle_streams_view(&mut self) {
+        match self.view {
+            View::Streams => {
+                self.view = View::Tasks;
+            }
+            _ => {
+                self.view = View::Streams;
+                self.streams_selected = 0;
+            }
+        }
+    }
+
+    pub fn streams_next(&mut self) {
+        if !self.stream_ids.is_empty() {
+            self.streams_selected = (self.streams_selected + 1).min(self.stream_ids.len() - 1);
+        }
+    }
+
+    pub fn streams_previous(&mut self) {
+        self.streams_selected = self.streams_selected.saturating_sub(1);
+    }
+
+    pub fn streams_first(&mut self) {
+        self.streams_selected = 0;
+    }
+
+    pub fn streams_last(&mut self) {
+        if !self.stream_ids.is_empty() {
+            self.streams_selected = self.stream_ids.len() - 1;
+        }
+    }
+
+    pub fn select_current_stream(&mut self) {
+        if let Some(stream_id) = self.stream_ids.get(self.streams_selected) {
+            self.stream_filter = Some(stream_id.clone());
+            self.view = View::Tasks;
+            let _ = self.reload_tasks();
+        }
+    }
+
+    pub fn start_new_stream(&mut self) {
+        self.input_mode = InputMode::NewStream;
+        self.input_buffer.clear();
+        self.message = None;
+    }
+
+    pub fn submit_new_stream(&mut self) {
+        if self.input_buffer.trim().is_empty() {
+            self.message = Some("Name cannot be empty".to_string());
+            self.input_mode = InputMode::Normal;
+            return;
+        }
+
+        let by = writer::get_current_user().unwrap_or_else(|_| "unknown".to_string());
+        let branch = writer::get_current_branch().unwrap_or_else(|_| "main".to_string());
+
+        match writer::create_stream(&self.ctx, self.input_buffer.trim(), None, &by, &branch) {
+            Ok(id) => {
+                self.message = Some(format!("Created stream: {}", self.input_buffer.trim()));
+                let _ = self.reload_tasks(); // This also reloads streams
+                                             // Select the new stream
+                if let Some(pos) = self.stream_ids.iter().position(|s| s == &id) {
+                    self.streams_selected = pos;
+                }
+            }
+            Err(e) => {
+                self.message = Some(format!("Error: {}", e));
+            }
+        }
+
+        self.input_mode = InputMode::Normal;
+        self.input_buffer.clear();
+    }
+
+    pub fn request_delete_stream(&mut self) {
+        if let Some(stream_id) = self.stream_ids.get(self.streams_selected).cloned() {
+            // Check if stream has tasks
+            let task_count = self
+                .all_tasks
+                .values()
+                .filter(|t| t.stream.as_ref() == Some(&stream_id))
+                .count();
+
+            if task_count > 0 {
+                self.message = Some(format!(
+                    "Cannot delete: stream has {} task{}",
+                    task_count,
+                    if task_count == 1 { "" } else { "s" }
+                ));
+                return;
+            }
+
+            let stream_name = self
+                .streams
+                .get(&stream_id)
+                .map(|s| s.name.clone())
+                .unwrap_or_else(|| stream_id.clone());
+
+            self.pending_delete_stream = Some(stream_id);
+            self.message = Some(format!(
+                "Delete \"{}\"? Press d again to confirm",
+                stream_name
+            ));
+        }
+    }
+
+    pub fn confirm_delete_stream(&mut self) {
+        if let Some(stream_id) = self.pending_delete_stream.take() {
+            let by = writer::get_current_user().unwrap_or_else(|_| "unknown".to_string());
+            let branch = writer::get_current_branch().unwrap_or_else(|_| "main".to_string());
+
+            match writer::delete_stream(&self.ctx, &stream_id, &by, &branch) {
+                Ok(()) => {
+                    self.message = Some("Stream deleted".to_string());
+                    let _ = self.reload_tasks();
+                    // Adjust selection if needed
+                    if self.streams_selected >= self.stream_ids.len() && !self.stream_ids.is_empty()
+                    {
+                        self.streams_selected = self.stream_ids.len() - 1;
+                    }
+                }
+                Err(e) => {
+                    self.message = Some(format!("Error: {}", e));
+                }
+            }
+        }
     }
 
     // History view methods
 
     pub fn toggle_history_view(&mut self) {
         match self.view {
-            View::Tasks => {
+            View::Tasks | View::Streams => {
                 self.view = View::History;
                 let _ = self.load_history();
             }
