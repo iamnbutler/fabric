@@ -54,16 +54,16 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, mut app: Ap
                     return Ok(());
                 }
 
-                // Global view navigation (Cmd+Arrow or [/])
+                // Global view navigation (Option+Arrow or [/])
                 // Skip if in input mode
                 if app.input_mode == InputMode::Normal && !app.search_mode {
-                    let is_super = key.modifiers.contains(KeyModifiers::SUPER);
+                    let is_alt = key.modifiers.contains(KeyModifiers::ALT);
                     match key.code {
-                        KeyCode::Right if is_super => {
+                        KeyCode::Right if is_alt => {
                             app.next_view();
                             continue;
                         }
-                        KeyCode::Left if is_super => {
+                        KeyCode::Left if is_alt => {
                             app.previous_view();
                             continue;
                         }

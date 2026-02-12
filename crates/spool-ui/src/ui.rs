@@ -981,7 +981,7 @@ fn draw_help_overlay(f: &mut Frame) {
         ]),
         Line::from("  j/k, ↑/↓     Move up/down"),
         Line::from("  g/G          Jump to first/last"),
-        Line::from("  [/]          Previous/next view"),
+        Line::from("  [/], ⌥←/→    Previous/next view"),
         Line::from("  Tab          Toggle detail panel"),
         Line::from(""),
         Line::from(vec![
