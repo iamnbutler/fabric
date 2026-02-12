@@ -38,7 +38,8 @@ fn operation_color(op: &str) -> Color {
 pub fn draw(f: &mut Frame, app: &mut App) {
     // Determine if we need a message/input bar
     let has_message = app.message.is_some();
-    let in_input_mode = app.input_mode == InputMode::NewTask;
+    let in_input_mode =
+        app.input_mode == InputMode::NewTask || app.input_mode == InputMode::NewStream;
     let show_bar = has_message || in_input_mode;
 
     let chunks = Layout::default()
@@ -67,6 +68,11 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         draw_footer(f, chunks[3], app);
     } else {
         draw_footer(f, chunks[2], app);
+    }
+
+    // Draw help overlay on top if shown
+    if app.show_help {
+        draw_help_overlay(f);
     }
 }
 
@@ -927,43 +933,135 @@ fn build_scrolled_spans(columns: &[(String, Style)], scroll_x: usize) -> Vec<Spa
 }
 
 fn draw_input_bar(f: &mut Frame, area: Rect, app: &App) {
-    let content = if app.input_mode == InputMode::NewTask {
-        Line::from(vec![
+    let content = match app.input_mode {
+        InputMode::NewTask => Line::from(vec![
             Span::styled(" New task: ", Style::default().fg(Color::Cyan)),
             Span::raw(&app.input_buffer),
             Span::styled("▌", Style::default().fg(Color::Cyan)),
-        ])
-    } else if let Some(msg) = &app.message {
-        Line::from(vec![Span::styled(
-            format!(" {}", msg),
-            Style::default().fg(Color::Yellow),
-        )])
-    } else {
-        Line::from("")
+        ]),
+        InputMode::NewStream => Line::from(vec![
+            Span::styled(" New stream: ", Style::default().fg(Color::Cyan)),
+            Span::raw(&app.input_buffer),
+            Span::styled("▌", Style::default().fg(Color::Cyan)),
+        ]),
+        InputMode::Normal => {
+            if let Some(msg) = &app.message {
+                Line::from(vec![Span::styled(
+                    format!(" {}", msg),
+                    Style::default().fg(Color::Yellow),
+                )])
+            } else {
+                Line::from("")
+            }
+        }
     };
 
     let bar = Paragraph::new(content);
     f.render_widget(bar, area);
 }
 
+fn draw_help_overlay(f: &mut Frame) {
+    let area = f.area();
+
+    // Calculate centered popup area
+    let popup_width = 50.min(area.width.saturating_sub(4));
+    let popup_height = 20.min(area.height.saturating_sub(4));
+    let popup_x = (area.width.saturating_sub(popup_width)) / 2;
+    let popup_y = (area.height.saturating_sub(popup_height)) / 2;
+
+    let popup_area = Rect::new(popup_x, popup_y, popup_width, popup_height);
+
+    // Clear the area behind the popup
+    f.render_widget(ratatui::widgets::Clear, popup_area);
+
+    let help_text = vec![
+        Line::from(vec![Span::styled(
+            "Keyboard Shortcuts",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Navigation", Style::default().add_modifier(Modifier::BOLD)),
+        ]),
+        Line::from("  j/k, ↑/↓     Move up/down"),
+        Line::from("  g/G          Jump to first/last"),
+        Line::from("  [/]          Previous/next view"),
+        Line::from("  Tab          Toggle detail panel"),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Tasks", Style::default().add_modifier(Modifier::BOLD)),
+        ]),
+        Line::from("  n            New task"),
+        Line::from("  c            Complete task"),
+        Line::from("  r            Reopen task"),
+        Line::from("  v            Cycle status filter"),
+        Line::from("  o            Cycle sort order"),
+        Line::from("  /            Search"),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Streams", Style::default().add_modifier(Modifier::BOLD)),
+        ]),
+        Line::from("  n            New stream"),
+        Line::from("  d            Delete stream"),
+        Line::from("  Enter        View stream tasks"),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("General", Style::default().add_modifier(Modifier::BOLD)),
+        ]),
+        Line::from("  s            Streams view"),
+        Line::from("  h            History view"),
+        Line::from("  q            Quit"),
+        Line::from("  Esc          Back / Quit"),
+        Line::from(""),
+        Line::from(vec![Span::styled(
+            "Press any key to close",
+            Style::default().fg(Color::DarkGray),
+        )]),
+    ];
+
+    let help = Paragraph::new(help_text)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::Cyan))
+                .title(" Help "),
+        )
+        .wrap(Wrap { trim: false });
+
+    f.render_widget(help, popup_area);
+}
+
 fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
-    let help = match app.input_mode {
-        InputMode::NewTask => " Enter:create  Esc:cancel ",
-        InputMode::Normal if app.search_mode => " Type to search, Enter/Esc to close ",
+    let (left_help, right_help) = match app.input_mode {
+        InputMode::NewTask | InputMode::NewStream => (" Enter:create  Esc:cancel", ""),
+        InputMode::Normal if app.search_mode => (" Type to search  Enter/Esc:close", ""),
         InputMode::Normal => match app.view {
-            View::Tasks => {
-                " q:quit  j/k:nav  c:complete  r:reopen  n:new  v:view  o:sort  s:streams  /:search  h:history "
-            }
-            View::Streams => " q:quit  j/k:nav  Enter:select  Esc/s:back ",
+            View::Tasks => (" n:new  c:complete  r:reopen  v:view  o:sort", "?:help "),
+            View::Streams => (" n:new  d:delete  Enter:select", "?:help "),
             View::History => {
                 if app.history_show_detail {
-                    " q:quit  j/k:scroll  Tab/Shift-Tab:nav  Esc:close  h:back "
+                    (" j/k:scroll  Esc:close", "?:help ")
                 } else {
-                    " q:quit  j/k:nav  l/left:scroll  Enter:detail  h:back "
+                    (" j/k:nav  Enter:detail", "?:help ")
                 }
             }
         },
     };
-    let footer = Paragraph::new(help).style(Style::default().fg(Color::DarkGray));
+
+    // Calculate padding for right-aligned help
+    let left_len = left_help.chars().count();
+    let right_len = right_help.chars().count();
+    let total_width = area.width as usize;
+    let padding = total_width.saturating_sub(left_len + right_len);
+
+    let line = Line::from(vec![
+        Span::styled(left_help, Style::default().fg(Color::DarkGray)),
+        Span::raw(" ".repeat(padding)),
+        Span::styled(right_help, Style::default().fg(Color::DarkGray)),
+    ]);
+
+    let footer = Paragraph::new(line);
     f.render_widget(footer, area);
 }

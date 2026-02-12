@@ -82,10 +82,29 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, mut app: Ap
                 // Clear message on any keypress
                 app.clear_message();
 
+                // Help toggle works globally
+                if key.code == KeyCode::Char('?') && app.input_mode == InputMode::Normal && !app.search_mode {
+                    app.toggle_help();
+                    continue;
+                }
+
+                // Close help with any key if open
+                if app.show_help {
+                    app.show_help = false;
+                    continue;
+                }
+
                 match app.input_mode {
                     InputMode::NewTask => match key.code {
                         KeyCode::Esc => app.cancel_input(),
                         KeyCode::Enter => app.submit_new_task(),
+                        KeyCode::Backspace => app.input_backspace(),
+                        KeyCode::Char(c) => app.input_char(c),
+                        _ => {}
+                    },
+                    InputMode::NewStream => match key.code {
+                        KeyCode::Esc => app.cancel_input(),
+                        KeyCode::Enter => app.submit_new_stream(),
                         KeyCode::Backspace => app.input_backspace(),
                         KeyCode::Char(c) => app.input_char(c),
                         _ => {}
@@ -146,6 +165,14 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, mut app: Ap
                         KeyCode::Char('g') => app.streams_first(),
                         KeyCode::Char('G') => app.streams_last(),
                         KeyCode::Enter => app.select_current_stream(),
+                        KeyCode::Char('n') => app.start_new_stream(),
+                        KeyCode::Char('d') => {
+                            if app.pending_delete_stream.is_some() {
+                                app.confirm_delete_stream();
+                            } else {
+                                app.request_delete_stream();
+                            }
+                        }
                         KeyCode::Esc | KeyCode::Char('s') => app.toggle_streams_view(),
                         _ => {}
                     },
