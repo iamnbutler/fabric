@@ -129,6 +129,9 @@ fn draw_main(f: &mut Frame, area: Rect, app: &mut App) {
 }
 
 fn draw_task_list(f: &mut Frame, area: Rect, app: &mut App) {
+    // Only show stream column when not filtering by a specific stream
+    let show_stream_col = app.stream_filter.is_none();
+
     let items: Vec<ListItem> = app
         .tasks
         .iter()
@@ -148,12 +151,26 @@ fn draw_task_list(f: &mut Frame, area: Rect, app: &mut App) {
                 .map(|a| format!(" {}", a))
                 .unwrap_or_default();
 
-            let line = Line::from(vec![
+            let mut spans = vec![
                 Span::styled(status_marker, Style::default().fg(Color::Green)),
                 Span::styled(format!("{:4} ", priority), pstyle),
-                Span::raw(&task.title),
-                Span::styled(assignee, Style::default().fg(Color::DarkGray)),
-            ]);
+            ];
+
+            // Add stream column if showing
+            if show_stream_col {
+                let stream_label = task
+                    .stream
+                    .as_ref()
+                    .and_then(|id| app.get_stream(id))
+                    .map(|s| format!("{:12} ", truncate_str(&s.name, 11)))
+                    .unwrap_or_else(|| "             ".to_string()); // 13 chars to match
+                spans.push(Span::styled(stream_label, Style::default().fg(Color::Blue)));
+            }
+
+            spans.push(Span::raw(&task.title));
+            spans.push(Span::styled(assignee, Style::default().fg(Color::DarkGray)));
+
+            let line = Line::from(spans);
 
             let style = if i == app.selected {
                 Style::default()
@@ -662,6 +679,16 @@ fn draw_history_detail(f: &mut Frame, area: Rect, app: &App) {
         .scroll((app.history_detail_scroll, 0));
 
     f.render_widget(detail, area);
+}
+
+/// Truncates string to max length, adding `~` if truncated.
+fn truncate_str(s: &str, max_len: usize) -> String {
+    if s.chars().count() > max_len {
+        let truncated: String = s.chars().take(max_len.saturating_sub(1)).collect();
+        format!("{}~", truncated)
+    } else {
+        s.to_string()
+    }
 }
 
 /// Pads or truncates string to exact width. Truncated strings end with `~`.
