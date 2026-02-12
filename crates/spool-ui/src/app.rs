@@ -462,6 +462,38 @@ impl App {
         self.message = None;
     }
 
+    // View navigation methods
+
+    pub fn next_view(&mut self) {
+        self.view = match self.view {
+            View::Tasks => View::Streams,
+            View::Streams => View::History,
+            View::History => View::Tasks,
+        };
+        self.on_view_change();
+    }
+
+    pub fn previous_view(&mut self) {
+        self.view = match self.view {
+            View::Tasks => View::History,
+            View::History => View::Streams,
+            View::Streams => View::Tasks,
+        };
+        self.on_view_change();
+    }
+
+    fn on_view_change(&mut self) {
+        match self.view {
+            View::Tasks => {}
+            View::Streams => {
+                self.streams_selected = 0;
+            }
+            View::History => {
+                let _ = self.load_history();
+            }
+        }
+    }
+
     // Streams view methods
 
     pub fn toggle_streams_view(&mut self) {

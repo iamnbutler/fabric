@@ -54,6 +54,31 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, mut app: Ap
                     return Ok(());
                 }
 
+                // Global view navigation (Cmd+Arrow or [/])
+                // Skip if in input mode
+                if app.input_mode == InputMode::Normal && !app.search_mode {
+                    let is_super = key.modifiers.contains(KeyModifiers::SUPER);
+                    match key.code {
+                        KeyCode::Right if is_super => {
+                            app.next_view();
+                            continue;
+                        }
+                        KeyCode::Left if is_super => {
+                            app.previous_view();
+                            continue;
+                        }
+                        KeyCode::Char(']') => {
+                            app.next_view();
+                            continue;
+                        }
+                        KeyCode::Char('[') => {
+                            app.previous_view();
+                            continue;
+                        }
+                        _ => {}
+                    }
+                }
+
                 // Clear message on any keypress
                 app.clear_message();
 
