@@ -3,6 +3,7 @@ use spool::context::SpoolContext;
 use spool::event::Event;
 use spool::state::{load_or_materialize_state, Stream, Task, TaskStatus};
 use spool::writer::{self, CreateTaskParams};
+use spool::{archive, init, rebuild, validation};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum View {
@@ -74,6 +75,27 @@ pub enum InputMode {
     NewStream,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Command {
+    Rebuild,
+    Validate,
+    Archive,
+}
+
+impl Command {
+    pub fn label(&self) -> &'static str {
+        match self {
+            Command::Rebuild => "Rebuild cache",
+            Command::Validate => "Validate events",
+            Command::Archive => "Archive old tasks",
+        }
+    }
+
+    pub fn all() -> &'static [Command] {
+        &[Command::Rebuild, Command::Validate, Command::Archive]
+    }
+}
+
 pub struct App {
     // Input state
     pub input_mode: InputMode,
@@ -81,6 +103,8 @@ pub struct App {
     pub message: Option<String>,
     pub pending_quit: bool,
     pub show_help: bool,
+    pub show_command_palette: bool,
+    pub command_selected: usize,
     pub pending_delete_stream: Option<String>, // stream ID pending deletion
     pub detail_scroll: u16,
     pub detail_content_height: u16, // set by UI during render
@@ -113,7 +137,15 @@ pub struct App {
 
 impl App {
     pub fn new() -> Result<Self> {
-        let ctx = SpoolContext::discover()?;
+        // Try to discover existing spool, or auto-init if not found
+        let ctx = match SpoolContext::discover() {
+            Ok(ctx) => ctx,
+            Err(_) => {
+                // Auto-initialize spool directory
+                init()?;
+                SpoolContext::discover()?
+            }
+        };
         let state = load_or_materialize_state(&ctx)?;
 
         let streams = state.streams.clone();
@@ -144,6 +176,8 @@ impl App {
             message: None,
             pending_quit: false,
             show_help: false,
+            show_command_palette: false,
+            command_selected: 0,
             pending_delete_stream: None,
             detail_scroll: 0,
             detail_content_height: 0,
@@ -473,6 +507,69 @@ impl App {
 
     pub fn toggle_help(&mut self) {
         self.show_help = !self.show_help;
+    }
+
+    pub fn toggle_command_palette(&mut self) {
+        self.show_command_palette = !self.show_command_palette;
+        self.command_selected = 0;
+    }
+
+    pub fn command_next(&mut self) {
+        let commands = Command::all();
+        if !commands.is_empty() {
+            self.command_selected = (self.command_selected + 1).min(commands.len() - 1);
+        }
+    }
+
+    pub fn command_previous(&mut self) {
+        self.command_selected = self.command_selected.saturating_sub(1);
+    }
+
+    pub fn execute_selected_command(&mut self) {
+        let commands = Command::all();
+        if let Some(cmd) = commands.get(self.command_selected) {
+            self.show_command_palette = false;
+            match cmd {
+                Command::Rebuild => match rebuild(&self.ctx) {
+                    Ok(()) => {
+                        self.message = Some("Cache rebuilt successfully".to_string());
+                        let _ = self.reload_tasks();
+                    }
+                    Err(e) => {
+                        self.message = Some(format!("Rebuild failed: {}", e));
+                    }
+                },
+                Command::Validate => match validation::validate(&self.ctx, false) {
+                    Ok(result) => {
+                        if result.errors.is_empty() && result.warnings.is_empty() {
+                            self.message = Some("Validation passed".to_string());
+                        } else {
+                            self.message = Some(format!(
+                                "Validation: {} errors, {} warnings",
+                                result.errors.len(),
+                                result.warnings.len()
+                            ));
+                        }
+                    }
+                    Err(e) => {
+                        self.message = Some(format!("Validation failed: {}", e));
+                    }
+                },
+                Command::Archive => match archive::archive_tasks(&self.ctx, 30, false) {
+                    Ok(archived_ids) => {
+                        if !archived_ids.is_empty() {
+                            self.message = Some(format!("Archived {} tasks", archived_ids.len()));
+                            let _ = self.reload_tasks();
+                        } else {
+                            self.message = Some("No tasks to archive".to_string());
+                        }
+                    }
+                    Err(e) => {
+                        self.message = Some(format!("Archive failed: {}", e));
+                    }
+                },
+            }
+        }
     }
 
     /// Returns true if should quit, false if showing confirmation
