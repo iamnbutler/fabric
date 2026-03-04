@@ -926,6 +926,134 @@ fn test_list_no_stream_filter() {
         .stdout(predicate::str::contains("Streamed task").not());
 }
 
+// ==========================================
+// Filter context header tests (#52)
+// ==========================================
+
+#[test]
+fn test_list_no_filter_context_by_default() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    // Without any filters, no "Filtered by:" line should appear
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .arg("list")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Filtered by:").not());
+}
+
+#[test]
+fn test_list_filter_context_shows_stream_name() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["stream", "add", "Frontend"])
+        .assert()
+        .success();
+
+    let id_output = spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["stream", "list", "--format", "ids"])
+        .assert()
+        .success();
+    let stream_id = String::from_utf8_lossy(&id_output.get_output().stdout)
+        .trim()
+        .to_string();
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["list", "--stream", &stream_id])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Filtered by: stream \"Frontend\""));
+}
+
+#[test]
+fn test_list_filter_context_stream_name_flag() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["stream", "add", "Backend"])
+        .assert()
+        .success();
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["list", "--stream-name", "Backend"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Filtered by: stream \"Backend\""));
+}
+
+#[test]
+fn test_list_filter_context_no_stream() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["list", "--no-stream"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Filtered by: no stream"));
+}
+
+#[test]
+fn test_list_filter_context_priority() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["list", "--priority", "p0"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Filtered by: priority: p0"));
+}
+
+#[test]
+fn test_list_filter_context_status() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    // Non-default status shows in filter context
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["list", "--status", "all"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Filtered by: status: all"));
+
+    // Default status (open) does NOT show in filter context
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["list", "--status", "open"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Filtered by:").not());
+}
+
+#[test]
+fn test_list_filter_context_multiple_filters() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["list", "--priority", "p0", "--assignee", "@alice"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "Filtered by: priority: p0, assignee: @alice",
+        ));
+}
+
 #[test]
 fn test_stream_list_json_format() {
     let temp_dir = TempDir::new().unwrap();
