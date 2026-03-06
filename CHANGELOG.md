@@ -7,12 +7,12 @@ All notable changes to Spool will be documented in this file.
 ### Fixed
 
 - Resolved potential panics from unwrapped `file_name()` calls in `state.rs` and `validation.rs` — replaced with proper error propagation
+- TUI streams view now shows open task count instead of total task count (#53)
 
 ### Added
 
 - Unit tests for TUI app state machine enums (`spool-ui`)
 - Integration tests for stream commands and list filters (`spool-cli`)
-- `spool list` now prints a "Filtered by: ..." context line when results are narrowed by `--stream`, `--stream-name`, `--no-stream`, `--priority`, `--tag`, `--assignee`, or a non-default `--status`
 
 ### Changed
 
