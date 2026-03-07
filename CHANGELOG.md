@@ -2,6 +2,22 @@
 
 All notable changes to Spool will be documented in this file.
 
+## [1.2.1] - 2026-03-04
+
+### Fixed
+
+- Resolved potential panics from unwrapped `file_name()` calls in `state.rs` and `validation.rs` — replaced with proper error propagation
+- TUI streams view now shows open task count instead of total task count (#53)
+
+### Added
+
+- Unit tests for TUI app state machine enums (`spool-ui`)
+- Integration tests for stream commands and list filters (`spool-cli`)
+
+### Changed
+
+- Updated dependencies
+
 ## [1.0.0] - 2026-01-25
 
 ### Added
