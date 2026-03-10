@@ -578,6 +578,115 @@ fn test_free_task_not_found() {
 }
 
 // ==========================================
+// Block / Unblock tests
+// ==========================================
+
+#[test]
+fn test_block_tasks() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+    write_test_events(
+        &temp_dir,
+        concat!(
+            r#"{"v":1,"op":"create","id":"task-001","ts":"2024-01-15T10:00:00Z","by":"@tester","branch":"main","d":{"title":"Auth fix"}}"#,
+            "\n",
+            r#"{"v":1,"op":"create","id":"task-002","ts":"2024-01-15T10:01:00Z","by":"@tester","branch":"main","d":{"title":"Deploy"}}"#,
+        ),
+    );
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["block", "task-001", "task-002"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("blocking task-002"));
+
+    // Verify task-001 shows blocks relationship
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["show", "task-001"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("task-002"));
+
+    // Verify task-002 shows blocked_by relationship
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["show", "task-002"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("task-001"));
+}
+
+#[test]
+fn test_block_tasks_self_error() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+    write_test_events(
+        &temp_dir,
+        r#"{"v":1,"op":"create","id":"task-001","ts":"2024-01-15T10:00:00Z","by":"@tester","branch":"main","d":{"title":"Test task"}}"#,
+    );
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["block", "task-001", "task-001"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot block itself"));
+}
+
+#[test]
+fn test_block_tasks_not_found() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["block", "nonexistent", "also-nonexistent"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("not found"));
+}
+
+#[test]
+fn test_unblock_tasks() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+    write_test_events(
+        &temp_dir,
+        concat!(
+            r#"{"v":1,"op":"create","id":"task-001","ts":"2024-01-15T10:00:00Z","by":"@tester","branch":"main","d":{"title":"Auth fix"}}"#,
+            "\n",
+            r#"{"v":1,"op":"create","id":"task-002","ts":"2024-01-15T10:01:00Z","by":"@tester","branch":"main","d":{"title":"Deploy"}}"#,
+            "\n",
+            r#"{"v":1,"op":"link","id":"task-001","ts":"2024-01-15T10:02:00Z","by":"@tester","branch":"main","d":{"rel":"blocks","target":"task-002"}}"#,
+            "\n",
+            r#"{"v":1,"op":"link","id":"task-002","ts":"2024-01-15T10:02:00Z","by":"@tester","branch":"main","d":{"rel":"blocked_by","target":"task-001"}}"#,
+        ),
+    );
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["unblock", "task-001", "task-002"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("no longer blocks task-002"));
+}
+
+#[test]
+fn test_unblock_tasks_not_found() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["unblock", "nonexistent", "also-nonexistent"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("not found"));
+}
+
+// ==========================================
 // List filter tests
 // ==========================================
 

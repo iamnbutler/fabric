@@ -519,6 +519,30 @@ fn test_cli_parse_free() {
     }
 }
 
+#[test]
+fn test_cli_parse_block() {
+    let cli = Cli::parse_from(["spool", "block", "task-001", "task-002"]);
+
+    if let Commands::Block { blocker, blocked } = cli.command {
+        assert_eq!(blocker, "task-001");
+        assert_eq!(blocked, "task-002");
+    } else {
+        panic!("Expected Block command");
+    }
+}
+
+#[test]
+fn test_cli_parse_unblock() {
+    let cli = Cli::parse_from(["spool", "unblock", "task-001", "task-002"]);
+
+    if let Commands::Unblock { blocker, blocked } = cli.command {
+        assert_eq!(blocker, "task-001");
+        assert_eq!(blocked, "task-002");
+    } else {
+        panic!("Expected Unblock command");
+    }
+}
+
 // Stream command tests
 
 #[test]
