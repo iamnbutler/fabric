@@ -163,6 +163,7 @@ fn test_update_task_writes_event() {
         Some("New title"),
         Some("New description"),
         Some("p0"),
+        None,
         "@tester",
         "main",
     )
@@ -191,6 +192,7 @@ fn test_update_task_partial_fields() {
         Some("Only title"),
         None,
         None,
+        None,
         "@tester",
         "main",
     )
@@ -210,13 +212,68 @@ fn test_update_task_no_fields_errors() {
     let spool_dir = setup_spool_dir(&temp_dir);
     let ctx = create_test_context(&spool_dir);
 
-    let result = update_task(&ctx, "task-001", None, None, None, "@tester", "main");
+    let result = update_task(&ctx, "task-001", None, None, None, None, "@tester", "main");
 
     assert!(result.is_err());
     assert!(result
         .unwrap_err()
         .to_string()
         .contains("No fields to update"));
+}
+
+#[test]
+fn test_update_task_with_tags() {
+    let temp_dir = TempDir::new().unwrap();
+    let spool_dir = setup_spool_dir(&temp_dir);
+    let ctx = create_test_context(&spool_dir);
+
+    let tags = vec!["bug".to_string(), "urgent".to_string()];
+    update_task(
+        &ctx,
+        "task-001",
+        None,
+        None,
+        None,
+        Some(&tags),
+        "@tester",
+        "main",
+    )
+    .unwrap();
+
+    let event_files = ctx.get_event_files().unwrap();
+    let content = fs::read_to_string(&event_files[0]).unwrap();
+    let event: serde_json::Value = serde_json::from_str(content.trim()).unwrap();
+
+    assert_eq!(event["op"], "update");
+    assert_eq!(event["d"]["tags"], serde_json::json!(["bug", "urgent"]));
+}
+
+#[test]
+fn test_update_task_with_empty_tags() {
+    let temp_dir = TempDir::new().unwrap();
+    let spool_dir = setup_spool_dir(&temp_dir);
+    let ctx = create_test_context(&spool_dir);
+
+    // Setting tags to empty list clears all tags
+    let tags: Vec<String> = vec![];
+    update_task(
+        &ctx,
+        "task-001",
+        None,
+        None,
+        None,
+        Some(&tags),
+        "@tester",
+        "main",
+    )
+    .unwrap();
+
+    let event_files = ctx.get_event_files().unwrap();
+    let content = fs::read_to_string(&event_files[0]).unwrap();
+    let event: serde_json::Value = serde_json::from_str(content.trim()).unwrap();
+
+    assert_eq!(event["op"], "update");
+    assert_eq!(event["d"]["tags"], serde_json::json!([]));
 }
 
 #[test]

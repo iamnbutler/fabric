@@ -106,6 +106,7 @@ pub fn update_task(
     title: Option<&str>,
     description: Option<&str>,
     priority: Option<&str>,
+    tags: Option<&[String]>,
     by: &str,
     branch: &str,
 ) -> Result<()> {
@@ -127,6 +128,17 @@ pub fn update_task(
         d.insert(
             "priority".to_string(),
             serde_json::Value::String(p.to_string()),
+        );
+    }
+    if let Some(tag_list) = tags {
+        d.insert(
+            "tags".to_string(),
+            serde_json::Value::Array(
+                tag_list
+                    .iter()
+                    .map(|t| serde_json::Value::String(t.clone()))
+                    .collect(),
+            ),
         );
     }
 

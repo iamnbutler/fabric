@@ -125,6 +125,12 @@ pub enum Commands {
         /// Move to stream (use "" to remove from stream)
         #[arg(long)]
         stream: Option<String>,
+        /// Add tag(s) to the task (can be used multiple times)
+        #[arg(long = "add-tag", value_name = "TAG")]
+        add_tags: Vec<String>,
+        /// Remove tag(s) from the task (can be used multiple times)
+        #[arg(long = "remove-tag", value_name = "TAG")]
+        remove_tags: Vec<String>,
     },
     /// Assign a task to a user
     Assign {
@@ -447,11 +453,13 @@ pub fn update_task(
     description: Option<&str>,
     priority: Option<&str>,
     stream: Option<&str>,
+    add_tags: &[String],
+    remove_tags: &[String],
 ) -> Result<()> {
     let state = load_or_materialize_state(ctx)?;
 
     // Verify task exists
-    state
+    let task = state
         .tasks
         .get(id)
         .ok_or_else(|| anyhow!("Task not found: {}", id))?;
@@ -469,9 +477,32 @@ pub fn update_task(
     let user = get_current_user()?;
     let branch = get_current_branch()?;
 
-    // Handle field updates
-    if title.is_some() || description.is_some() || priority.is_some() {
-        write_update(ctx, id, title, description, priority, &user, &branch)?;
+    // Compute new tags list if any tag operations were requested
+    let new_tags: Option<Vec<String>> = if !add_tags.is_empty() || !remove_tags.is_empty() {
+        let mut tags = task.tags.clone();
+        for tag in add_tags {
+            if !tags.contains(tag) {
+                tags.push(tag.clone());
+            }
+        }
+        tags.retain(|t| !remove_tags.contains(t));
+        Some(tags)
+    } else {
+        None
+    };
+
+    // Handle field updates (title, description, priority, and/or tags)
+    if title.is_some() || description.is_some() || priority.is_some() || new_tags.is_some() {
+        write_update(
+            ctx,
+            id,
+            title,
+            description,
+            priority,
+            new_tags.as_deref(),
+            &user,
+            &branch,
+        )?;
     }
 
     // Handle stream change separately (different operation type)
@@ -489,6 +520,9 @@ pub fn update_task(
     }
     if priority.is_some() {
         updates.push("priority");
+    }
+    if new_tags.is_some() {
+        updates.push("tags");
     }
     if stream.is_some() {
         updates.push("stream");
