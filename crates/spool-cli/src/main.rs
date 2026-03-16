@@ -91,6 +91,8 @@ fn main() -> Result<()> {
             description,
             priority,
             stream,
+            add_tags,
+            remove_tags,
         } => {
             let ctx = SpoolContext::discover()?;
             update_task(
@@ -100,6 +102,8 @@ fn main() -> Result<()> {
                 description.as_deref(),
                 priority.as_deref(),
                 stream.as_deref(),
+                &add_tags,
+                &remove_tags,
             )
         }
         Commands::Assign { id, assignee } => {

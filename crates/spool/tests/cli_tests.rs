@@ -281,7 +281,7 @@ fn test_cli_parse_update_with_title() {
         title,
         description,
         priority,
-        stream: _,
+        ..
     } = cli.command
     {
         assert_eq!(id, "task-123");
@@ -308,7 +308,7 @@ fn test_cli_parse_update_with_description() {
         title,
         description,
         priority,
-        stream: _,
+        ..
     } = cli.command
     {
         assert_eq!(id, "task-456");
@@ -329,7 +329,7 @@ fn test_cli_parse_update_with_priority() {
         title,
         description,
         priority,
-        stream: _,
+        ..
     } = cli.command
     {
         assert_eq!(id, "task-789");
@@ -360,7 +360,7 @@ fn test_cli_parse_update_all_fields() {
         title,
         description,
         priority,
-        stream: _,
+        ..
     } = cli.command
     {
         assert_eq!(id, "task-full");
@@ -391,7 +391,7 @@ fn test_cli_parse_update_short_flags() {
         title,
         description,
         priority,
-        stream: _,
+        ..
     } = cli.command
     {
         assert_eq!(id, "task-short");
@@ -412,13 +412,86 @@ fn test_cli_parse_update_no_options() {
         title,
         description,
         priority,
-        stream: _,
+        ..
     } = cli.command
     {
         assert_eq!(id, "task-empty");
         assert!(title.is_none());
         assert!(description.is_none());
         assert!(priority.is_none());
+    } else {
+        panic!("Expected Update command");
+    }
+}
+
+#[test]
+fn test_cli_parse_update_add_tags() {
+    let cli = Cli::parse_from([
+        "spool",
+        "update",
+        "task-tag",
+        "--add-tag",
+        "bug",
+        "--add-tag",
+        "urgent",
+    ]);
+
+    if let Commands::Update {
+        id,
+        add_tags,
+        remove_tags,
+        ..
+    } = cli.command
+    {
+        assert_eq!(id, "task-tag");
+        assert_eq!(add_tags, vec!["bug", "urgent"]);
+        assert!(remove_tags.is_empty());
+    } else {
+        panic!("Expected Update command");
+    }
+}
+
+#[test]
+fn test_cli_parse_update_remove_tags() {
+    let cli = Cli::parse_from(["spool", "update", "task-untag", "--remove-tag", "obsolete"]);
+
+    if let Commands::Update {
+        id,
+        add_tags,
+        remove_tags,
+        ..
+    } = cli.command
+    {
+        assert_eq!(id, "task-untag");
+        assert!(add_tags.is_empty());
+        assert_eq!(remove_tags, vec!["obsolete"]);
+    } else {
+        panic!("Expected Update command");
+    }
+}
+
+#[test]
+fn test_cli_parse_update_add_and_remove_tags() {
+    let cli = Cli::parse_from([
+        "spool",
+        "update",
+        "task-retag",
+        "--add-tag",
+        "new-tag",
+        "--remove-tag",
+        "old-tag",
+    ]);
+
+    if let Commands::Update {
+        id,
+        add_tags,
+        remove_tags,
+        ..
+    } = cli.command
+    {
+        assert_eq!(id, "task-retag");
+        assert_eq!(add_tags, vec!["new-tag"]);
+        assert_eq!(remove_tags, vec!["old-tag"]);
     } else {
         panic!("Expected Update command");
     }

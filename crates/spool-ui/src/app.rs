@@ -576,6 +576,7 @@ impl App {
                         Some(self.input_buffer.trim()),
                         None,
                         None,
+                        None,
                         &by,
                         &branch,
                     )
@@ -586,7 +587,9 @@ impl App {
                     } else {
                         Some(self.input_buffer.trim())
                     };
-                    writer::update_task(&self.ctx, &task_id, None, None, priority, &by, &branch)
+                    writer::update_task(
+                        &self.ctx, &task_id, None, None, priority, None, &by, &branch,
+                    )
                 }
                 _ => Ok(()),
             };

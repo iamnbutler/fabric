@@ -362,6 +362,89 @@ fn test_update_task_not_found() {
 }
 
 #[test]
+fn test_update_task_add_tag() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+    write_test_events(
+        &temp_dir,
+        r#"{"v":1,"op":"create","id":"task-001","ts":"2024-01-15T10:00:00Z","by":"@tester","branch":"main","d":{"title":"Tagged task","tags":["existing"]}}"#,
+    );
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["update", "task-001", "--add-tag", "new-tag"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("tags"));
+
+    // Verify both tags are present
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["show", "task-001"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("existing"))
+        .stdout(predicate::str::contains("new-tag"));
+}
+
+#[test]
+fn test_update_task_remove_tag() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+    write_test_events(
+        &temp_dir,
+        r#"{"v":1,"op":"create","id":"task-001","ts":"2024-01-15T10:00:00Z","by":"@tester","branch":"main","d":{"title":"Tagged task","tags":["keep","remove-me"]}}"#,
+    );
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["update", "task-001", "--remove-tag", "remove-me"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("tags"));
+
+    // Verify only the kept tag remains
+    let output = spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["show", "task-001"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let output_str = String::from_utf8_lossy(&output);
+    assert!(output_str.contains("keep"));
+    assert!(!output_str.contains("remove-me"));
+}
+
+#[test]
+fn test_update_task_add_duplicate_tag_is_idempotent() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+    write_test_events(
+        &temp_dir,
+        r#"{"v":1,"op":"create","id":"task-001","ts":"2024-01-15T10:00:00Z","by":"@tester","branch":"main","d":{"title":"Tagged task","tags":["existing"]}}"#,
+    );
+
+    // Adding a tag that already exists should not duplicate it
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["update", "task-001", "--add-tag", "existing"])
+        .assert()
+        .success();
+
+    let output = spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["show", "task-001"])
+        .output()
+        .unwrap();
+    let output_str = String::from_utf8_lossy(&output.stdout);
+    // Tags line should show "existing" once, not duplicated (e.g. "Tags:     existing")
+    let tag_count = output_str.matches("existing").count();
+    assert_eq!(tag_count, 1, "Tag should not be duplicated");
+}
+
+#[test]
 fn test_rebuild_regenerates_state() {
     let temp_dir = TempDir::new().unwrap();
     setup_initialized_spool(&temp_dir);
