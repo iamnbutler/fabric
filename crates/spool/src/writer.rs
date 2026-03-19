@@ -264,7 +264,7 @@ pub fn create_stream(
     let id = generate_id();
 
     let mut d = serde_json::json!({
-        "name": name,
+        "name": name.to_lowercase(),
     });
 
     if let Some(desc) = description {
@@ -298,7 +298,7 @@ pub fn update_stream(
     let mut d = serde_json::Map::new();
 
     if let Some(n) = name {
-        d.insert("name".to_string(), serde_json::Value::String(n.to_string()));
+        d.insert("name".to_string(), serde_json::Value::String(n.to_lowercase()));
     }
     if let Some(desc) = description {
         d.insert(
