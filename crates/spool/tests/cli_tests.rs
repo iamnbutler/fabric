@@ -519,6 +519,28 @@ fn test_cli_parse_free() {
     }
 }
 
+#[test]
+fn test_cli_parse_start() {
+    let cli = Cli::parse_from(["spool", "start", "task-123"]);
+
+    if let Commands::Start { id } = cli.command {
+        assert_eq!(id, "task-123");
+    } else {
+        panic!("Expected Start command");
+    }
+}
+
+#[test]
+fn test_cli_parse_stop() {
+    let cli = Cli::parse_from(["spool", "stop", "task-456"]);
+
+    if let Commands::Stop { id } = cli.command {
+        assert_eq!(id, "task-456");
+    } else {
+        panic!("Expected Stop command");
+    }
+}
+
 // Stream command tests
 
 #[test]

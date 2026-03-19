@@ -338,3 +338,20 @@ pub fn delete_stream(ctx: &SpoolContext, id: &str, by: &str, branch: &str) -> Re
 
     write_event(ctx, &event)
 }
+
+/// Update a task's tags
+pub fn update_tags(ctx: &SpoolContext, id: &str, tags: Vec<String>, by: &str, branch: &str) -> Result<()> {
+    let event = Event {
+        v: 1,
+        op: Operation::Update,
+        id: id.to_string(),
+        ts: Utc::now(),
+        by: by.to_string(),
+        branch: branch.to_string(),
+        d: serde_json::json!({
+            "tags": tags
+        }),
+    };
+
+    write_event(ctx, &event)
+}

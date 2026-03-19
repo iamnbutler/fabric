@@ -578,6 +578,243 @@ fn test_free_task_not_found() {
 }
 
 // ==========================================
+// Start/Stop tests
+// ==========================================
+
+#[test]
+fn test_start_task() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+    write_test_events(
+        &temp_dir,
+        r#"{"v":1,"op":"create","id":"task-001","ts":"2024-01-15T10:00:00Z","by":"@tester","branch":"main","d":{"title":"Test task"}}"#,
+    );
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["start", "task-001"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Started task task-001"))
+        .stdout(predicate::str::contains("in-progress"));
+
+    // Verify task has in-progress tag and is assigned
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["show", "task-001"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Tags:"))
+        .stdout(predicate::str::contains("in-progress"))
+        .stdout(predicate::str::contains("Assignee:"));
+}
+
+#[test]
+fn test_start_task_preserves_existing_tags() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+    write_test_events(
+        &temp_dir,
+        r#"{"v":1,"op":"create","id":"task-001","ts":"2024-01-15T10:00:00Z","by":"@tester","branch":"main","d":{"title":"Test task","tags":["feature","urgent"]}}"#,
+    );
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["start", "task-001"])
+        .assert()
+        .success();
+
+    // Verify task has all tags (original + in-progress)
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["show", "task-001"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("feature"))
+        .stdout(predicate::str::contains("urgent"))
+        .stdout(predicate::str::contains("in-progress"));
+}
+
+#[test]
+fn test_start_task_not_found() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["start", "nonexistent"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("not found"));
+}
+
+#[test]
+fn test_start_already_in_progress_errors() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+    write_test_events(
+        &temp_dir,
+        concat!(
+            r#"{"v":1,"op":"create","id":"task-001","ts":"2024-01-15T10:00:00Z","by":"@tester","branch":"main","d":{"title":"Test task"}}"#,
+            "\n",
+            r#"{"v":1,"op":"update","id":"task-001","ts":"2024-01-15T11:00:00Z","by":"@tester","branch":"main","d":{"tags":["in-progress"]}}"#
+        ),
+    );
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["start", "task-001"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("already in-progress"));
+}
+
+#[test]
+fn test_start_completed_task_errors() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+    write_test_events(
+        &temp_dir,
+        concat!(
+            r#"{"v":1,"op":"create","id":"task-001","ts":"2024-01-15T10:00:00Z","by":"@tester","branch":"main","d":{"title":"Test task"}}"#,
+            "\n",
+            r#"{"v":1,"op":"complete","id":"task-001","ts":"2024-01-15T11:00:00Z","by":"@tester","branch":"main","d":{"resolution":"done"}}"#
+        ),
+    );
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["start", "task-001"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Cannot start a completed task"));
+}
+
+#[test]
+fn test_stop_task() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+    write_test_events(
+        &temp_dir,
+        concat!(
+            r#"{"v":1,"op":"create","id":"task-001","ts":"2024-01-15T10:00:00Z","by":"@tester","branch":"main","d":{"title":"Test task","tags":["in-progress"]}}"#
+        ),
+    );
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["stop", "task-001"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Stopped task task-001"))
+        .stdout(predicate::str::contains("removed in-progress"));
+
+    // Verify task no longer has in-progress tag
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["show", "task-001"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("in-progress").not());
+}
+
+#[test]
+fn test_stop_task_preserves_other_tags() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+    write_test_events(
+        &temp_dir,
+        r#"{"v":1,"op":"create","id":"task-001","ts":"2024-01-15T10:00:00Z","by":"@tester","branch":"main","d":{"title":"Test task","tags":["feature","in-progress","urgent"]}}"#,
+    );
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["stop", "task-001"])
+        .assert()
+        .success();
+
+    // Verify task still has other tags but not in-progress
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["show", "task-001"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("feature"))
+        .stdout(predicate::str::contains("urgent"))
+        .stdout(predicate::str::contains("in-progress").not());
+}
+
+#[test]
+fn test_stop_task_not_found() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["stop", "nonexistent"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("not found"));
+}
+
+#[test]
+fn test_stop_task_not_in_progress_errors() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+    write_test_events(
+        &temp_dir,
+        r#"{"v":1,"op":"create","id":"task-001","ts":"2024-01-15T10:00:00Z","by":"@tester","branch":"main","d":{"title":"Test task"}}"#,
+    );
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["stop", "task-001"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("not in-progress"));
+}
+
+#[test]
+fn test_start_then_stop_workflow() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+    write_test_events(
+        &temp_dir,
+        r#"{"v":1,"op":"create","id":"task-001","ts":"2024-01-15T10:00:00Z","by":"@tester","branch":"main","d":{"title":"Test task"}}"#,
+    );
+
+    // Start the task
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["start", "task-001"])
+        .assert()
+        .success();
+
+    // Verify in-progress
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["list", "--tag", "in-progress"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("task-001"));
+
+    // Stop the task
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["stop", "task-001"])
+        .assert()
+        .success();
+
+    // Verify no longer in-progress
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["list", "--tag", "in-progress"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("No tasks found"));
+}
+
+// ==========================================
 // List filter tests
 // ==========================================
 
