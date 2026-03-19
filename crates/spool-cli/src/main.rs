@@ -4,8 +4,8 @@ use clap::Parser;
 use spool::archive::archive_tasks;
 use spool::cli::{
     add_stream, add_task, assign_task, claim_task, complete_task, delete_stream, free_task,
-    list_streams, list_tasks, reopen_task, show_stream, show_task, update_stream_cmd, update_task,
-    Cli, Commands, OutputFormat, StreamCommands,
+    list_streams, list_tasks, reopen_task, show_stream, show_task, start_task, stop_task,
+    update_stream_cmd, update_task, Cli, Commands, OutputFormat, StreamCommands,
 };
 use spool::context::{init, SpoolContext};
 use spool::state::rebuild;
@@ -113,6 +113,14 @@ fn main() -> Result<()> {
         Commands::Free { id } => {
             let ctx = SpoolContext::discover()?;
             free_task(&ctx, &id)
+        }
+        Commands::Start { id } => {
+            let ctx = SpoolContext::discover()?;
+            start_task(&ctx, &id)
+        }
+        Commands::Stop { id } => {
+            let ctx = SpoolContext::discover()?;
+            stop_task(&ctx, &id)
         }
         Commands::Stream { command } => {
             let ctx = SpoolContext::discover()?;

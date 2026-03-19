@@ -9,7 +9,7 @@ use crate::writer::{
     create_stream as write_create_stream, create_task as write_create,
     delete_stream as write_delete_stream, get_current_branch, get_current_user,
     reopen_task as write_reopen, set_stream as write_stream, update_stream as write_update_stream,
-    update_task as write_update, CreateTaskParams,
+    update_tags as write_tags, update_task as write_update, CreateTaskParams,
 };
 
 #[derive(Parser)]
@@ -136,6 +136,16 @@ pub enum Commands {
     /// Assign a task to yourself
     Claim {
         /// Task ID to claim
+        id: String,
+    },
+    /// Claim a task and mark it as in-progress
+    Start {
+        /// Task ID to start working on
+        id: String,
+    },
+    /// Stop working on a task (remove in-progress tag)
+    Stop {
+        /// Task ID to stop working on
         id: String,
     },
     /// Manage streams (workstreams/projects)
@@ -589,6 +599,74 @@ pub fn free_task(ctx: &SpoolContext, id: &str) -> Result<()> {
 
     write_assign(ctx, id, None, &user, &branch)?;
     println!("Freed task {} (unassigned)", id);
+
+    Ok(())
+}
+
+/// The tag used to indicate a task is actively being worked on
+const IN_PROGRESS_TAG: &str = "in-progress";
+
+/// Claim a task and mark it as in-progress
+pub fn start_task(ctx: &SpoolContext, id: &str) -> Result<()> {
+    let state = load_or_materialize_state(ctx)?;
+
+    // Verify task exists and is open
+    let task = state
+        .tasks
+        .get(id)
+        .ok_or_else(|| anyhow!("Task not found: {}", id))?;
+
+    if task.status == TaskStatus::Complete {
+        return Err(anyhow!("Cannot start a completed task: {}", id));
+    }
+
+    if task.tags.contains(&IN_PROGRESS_TAG.to_string()) {
+        return Err(anyhow!("Task {} is already in-progress", id));
+    }
+
+    let user = get_current_user()?;
+    let branch = get_current_branch()?;
+
+    // Assign to current user (like claim)
+    write_assign(ctx, id, Some(&user), &user, &branch)?;
+
+    // Add in-progress tag (preserving existing tags)
+    let mut new_tags = task.tags.clone();
+    new_tags.push(IN_PROGRESS_TAG.to_string());
+    write_tags(ctx, id, new_tags, &user, &branch)?;
+
+    println!("Started task {} (assigned to {}, tagged {})", id, user, IN_PROGRESS_TAG);
+
+    Ok(())
+}
+
+/// Stop working on a task (remove in-progress tag but keep assigned)
+pub fn stop_task(ctx: &SpoolContext, id: &str) -> Result<()> {
+    let state = load_or_materialize_state(ctx)?;
+
+    // Verify task exists
+    let task = state
+        .tasks
+        .get(id)
+        .ok_or_else(|| anyhow!("Task not found: {}", id))?;
+
+    if !task.tags.contains(&IN_PROGRESS_TAG.to_string()) {
+        return Err(anyhow!("Task {} is not in-progress", id));
+    }
+
+    let user = get_current_user()?;
+    let branch = get_current_branch()?;
+
+    // Remove in-progress tag (preserving other tags)
+    let new_tags: Vec<String> = task
+        .tags
+        .iter()
+        .filter(|t| *t != IN_PROGRESS_TAG)
+        .cloned()
+        .collect();
+    write_tags(ctx, id, new_tags, &user, &branch)?;
+
+    println!("Stopped task {} (removed {} tag)", id, IN_PROGRESS_TAG);
 
     Ok(())
 }
