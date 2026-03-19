@@ -195,6 +195,8 @@ fn draw_task_list(f: &mut Frame, area: Rect, app: &mut App) {
 
     let title = if app.search_mode {
         format!(" Tasks  /{}▌", app.search_query)
+    } else if app.stream_filter.is_some() {
+        format!(" Tasks in: {} ", app.stream_filter_label())
     } else {
         " Tasks ".to_string()
     };

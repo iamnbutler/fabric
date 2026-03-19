@@ -290,6 +290,50 @@ pub fn list_tasks(
             }
         }
         OutputFormat::Table => {
+            // Build filter context line
+            let mut filter_parts: Vec<String> = Vec::new();
+
+            // Stream filter (resolved to name if possible)
+            if let Some(ref stream_id) = effective_stream {
+                let stream_name = state
+                    .streams
+                    .get(stream_id)
+                    .map(|s| s.name.as_str())
+                    .unwrap_or(stream_id);
+                filter_parts.push(format!("stream: {}", stream_name));
+            }
+            if no_stream {
+                filter_parts.push("no stream".to_string());
+            }
+
+            // Status filter (omit "open" as it's the default)
+            if let Some(s) = status_filter {
+                if s != "open" {
+                    filter_parts.push(format!("status: {}", s));
+                }
+            }
+
+            // Priority filter
+            if let Some(p) = priority {
+                filter_parts.push(format!("priority: {}", p));
+            }
+
+            // Assignee filter
+            if let Some(a) = assignee {
+                filter_parts.push(format!("assignee: {}", a));
+            }
+
+            // Tag filter
+            if let Some(t) = tag {
+                filter_parts.push(format!("tag: {}", t));
+            }
+
+            // Print filter line if any filters are active
+            if !filter_parts.is_empty() {
+                println!("Filtered by: {}", filter_parts.join(", "));
+                println!();
+            }
+
             if tasks.is_empty() {
                 println!("No tasks found.");
                 return Ok(());
