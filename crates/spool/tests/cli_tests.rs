@@ -689,3 +689,33 @@ fn test_cli_parse_stream_delete() {
         panic!("Expected Stream command");
     }
 }
+
+#[test]
+fn test_cli_parse_stream_prune() {
+    let cli = Cli::parse_from(["spool", "stream", "prune"]);
+
+    if let Commands::Stream { command } = cli.command {
+        if let StreamCommands::Prune { force } = command {
+            assert!(!force);
+        } else {
+            panic!("Expected Stream Prune command");
+        }
+    } else {
+        panic!("Expected Stream command");
+    }
+}
+
+#[test]
+fn test_cli_parse_stream_prune_force() {
+    let cli = Cli::parse_from(["spool", "stream", "prune", "--force"]);
+
+    if let Commands::Stream { command } = cli.command {
+        if let StreamCommands::Prune { force } = command {
+            assert!(force);
+        } else {
+            panic!("Expected Stream Prune command");
+        }
+    } else {
+        panic!("Expected Stream command");
+    }
+}
