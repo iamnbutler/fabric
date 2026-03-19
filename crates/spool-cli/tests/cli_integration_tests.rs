@@ -945,3 +945,108 @@ fn test_stream_list_json_format() {
         .stdout(predicate::str::contains("\"name\":"))
         .stdout(predicate::str::contains("JSON Stream"));
 }
+
+#[test]
+fn test_list_filter_context_shows_stream_name() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["stream", "add", "API"])
+        .assert()
+        .success();
+
+    let id_output = spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["stream", "list", "--format", "ids"])
+        .assert()
+        .success();
+    let stream_id = String::from_utf8_lossy(&id_output.get_output().stdout)
+        .trim()
+        .to_string();
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["add", "API task", "--stream", &stream_id])
+        .assert()
+        .success();
+
+    // Filter by stream name should show "Filtered by: stream: API"
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["list", "--stream-name", "API"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Filtered by: stream: API"));
+}
+
+#[test]
+fn test_list_filter_context_shows_no_stream() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["add", "Unassigned task"])
+        .assert()
+        .success();
+
+    // --no-stream should show "Filtered by: no stream"
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["list", "--no-stream"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Filtered by: no stream"));
+}
+
+#[test]
+fn test_list_filter_context_shows_multiple_filters() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["add", "High priority task", "--priority", "p0", "--tag", "urgent"])
+        .assert()
+        .success();
+
+    // Multiple filters should all be shown
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["list", "--priority", "p0", "--tag", "urgent"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Filtered by:"))
+        .stdout(predicate::str::contains("priority: p0"))
+        .stdout(predicate::str::contains("tag: urgent"));
+}
+
+#[test]
+fn test_list_filter_context_omits_default_status() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["add", "Simple task"])
+        .assert()
+        .success();
+
+    // Default (--status open) should not show filter context
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["list"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Filtered by:").not());
+
+    // Explicit "complete" status should show filter context
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["list", "--status", "complete"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Filtered by: status: complete"));
+}
