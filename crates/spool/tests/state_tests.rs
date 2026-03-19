@@ -532,7 +532,7 @@ fn test_state_materialization_create_stream() {
     assert_eq!(state.streams.len(), 1);
     let stream = state.streams.get("stream-001").unwrap();
     assert_eq!(stream.id, "stream-001");
-    assert_eq!(stream.name, "Project Alpha");
+    assert_eq!(stream.name, "project alpha");
     assert_eq!(stream.description.as_deref(), Some("Main project"));
     assert_eq!(stream.created_by, "@tester");
 }
@@ -561,8 +561,46 @@ fn test_state_materialization_update_stream() {
     let state = spool::state::materialize(&ctx).unwrap();
 
     let stream = state.streams.get("stream-002").unwrap();
-    assert_eq!(stream.name, "Updated Name");
+    assert_eq!(stream.name, "updated name");
     assert_eq!(stream.description.as_deref(), Some("New description"));
+}
+
+#[test]
+fn test_state_materialization_stream_name_normalization() {
+    // Test that stream names are normalized to lowercase during replay.
+    // This ensures existing mixed-case names in the event log are normalized.
+    let temp_dir = TempDir::new().unwrap();
+    let spool_dir = setup_spool_dir(&temp_dir);
+
+    let events = vec![
+        json!({
+            "v": 1, "op": "create_stream", "id": "stream-mixed",
+            "ts": "2024-01-15T10:00:00Z", "by": "@tester", "branch": "main",
+            "d": {"name": "My-Project-NAME"}
+        }),
+        json!({
+            "v": 1, "op": "create_stream", "id": "stream-upper",
+            "ts": "2024-01-15T10:01:00Z", "by": "@tester", "branch": "main",
+            "d": {"name": "UPPERCASE"}
+        }),
+        json!({
+            "v": 1, "op": "update_stream", "id": "stream-mixed",
+            "ts": "2024-01-15T11:00:00Z", "by": "@tester", "branch": "main",
+            "d": {"name": "Updated-NAME"}
+        }),
+    ];
+
+    write_events(&spool_dir.join("events"), "2024-01-15.jsonl", &events);
+
+    let ctx = create_test_context(&spool_dir);
+    let state = spool::state::materialize(&ctx).unwrap();
+
+    // Both streams should have lowercase names
+    let mixed = state.streams.get("stream-mixed").unwrap();
+    assert_eq!(mixed.name, "updated-name");
+
+    let upper = state.streams.get("stream-upper").unwrap();
+    assert_eq!(upper.name, "uppercase");
 }
 
 #[test]
