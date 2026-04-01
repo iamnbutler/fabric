@@ -1,8 +1,9 @@
 {
-  "last_run": "2026-03-31",
-  "last_run_id": "23777388983",
-  "monthly_activity_issue": 45,
-  "monthly_activity_month": "2026-03",
+  "last_run": "2026-04-01",
+  "last_run_id": "23828840098",
+  "monthly_activity_issue": 74,
+  "monthly_activity_month": "2026-04",
+  "monthly_activity_issue_note": "Issue #74 estimated (next after #73); verify on next run",
   "backlog_cursor": null,
   "comments_made": {
     "issues": [48, 49, 50, 51, 52, 65, 70, 71],
@@ -40,7 +41,7 @@
     "task8_release": "2026-03-06",
     "task9_welcome": "2026-03-26",
     "task10_forward": "2026-03-10",
-    "task11_monthly_summary": "2026-03-31"
+    "task11_monthly_summary": "2026-04-01"
   },
-  "notes": "All open issues (#49, #51, #52, #70, #71) have Repo Assist comments. Maintainer PRs #67, #68, #69, #72 open for review. Repo Assist PRs #54, #56, #58 superseded. PR #60 (deps) fully current as of 2026-03-31 (wasm-bindgen 0.2.116). PR #64 and #72 have tag overlap - documented. No new issues since #73. Issue #73 (agentics failure) expired 2026-03-30."
+  "notes": "New month: April 2026. Closed March issue #45, created April issue #74 (est). All open issues (#49, #51, #52, #70, #71) have Repo Assist comments. Maintainer PRs #67, #68, #69, #72 open for review. Repo Assist PRs #54, #56, #58 superseded (pending maintainer closure). PR #60 (deps) current as of 2026-03-31. PR #64 and #72 have tag overlap - documented. Issue #73 expired 2026-03-30. Priorities next run: Task 10 (forward, since 2026-03-10), Task 3 (improvements, since 2026-03-16), Task 2 (fix, since 2026-03-19)."
 }
