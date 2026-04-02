@@ -5,7 +5,8 @@ use spool::context::SpoolContext;
 use spool::event::{Event, Operation};
 use spool::writer::{
     complete_task, create_stream, create_task, delete_stream, get_current_branch, get_current_user,
-    reopen_task, set_stream, update_stream, update_task, write_event, CreateTaskParams,
+    reopen_task, set_stream, update_stream, update_task, write_comment, write_event,
+    CreateTaskParams,
 };
 
 fn setup_spool_dir(temp_dir: &TempDir) -> std::path::PathBuf {
@@ -459,6 +460,76 @@ fn test_set_stream_to_none() {
     let set_stream_event: serde_json::Value = serde_json::from_str(lines[1]).unwrap();
     assert_eq!(set_stream_event["op"], "set_stream");
     assert!(set_stream_event["d"]["stream"].is_null());
+}
+
+// Comment writer tests
+
+#[test]
+fn test_write_comment_writes_event() {
+    let temp_dir = TempDir::new().unwrap();
+    let spool_dir = setup_spool_dir(&temp_dir);
+    let ctx = create_test_context(&spool_dir);
+
+    let id = create_task(
+        &ctx,
+        CreateTaskParams {
+            title: "Task to comment on",
+            ..Default::default()
+        },
+        "@tester",
+        "main",
+    )
+    .unwrap();
+
+    write_comment(&ctx, &id, "This is a comment", None, "@tester", "main").unwrap();
+
+    let event_files = ctx.get_event_files().unwrap();
+    let content = fs::read_to_string(&event_files[0]).unwrap();
+    let lines: Vec<&str> = content.lines().collect();
+    assert_eq!(lines.len(), 2);
+
+    let comment_event: serde_json::Value = serde_json::from_str(lines[1]).unwrap();
+    assert_eq!(comment_event["op"], "comment");
+    assert_eq!(comment_event["id"], id);
+    assert_eq!(comment_event["d"]["body"], "This is a comment");
+    assert!(comment_event["d"]["ref"].is_null());
+}
+
+#[test]
+fn test_write_comment_with_ref() {
+    let temp_dir = TempDir::new().unwrap();
+    let spool_dir = setup_spool_dir(&temp_dir);
+    let ctx = create_test_context(&spool_dir);
+
+    let id = create_task(
+        &ctx,
+        CreateTaskParams {
+            title: "Task with ref comment",
+            ..Default::default()
+        },
+        "@tester",
+        "main",
+    )
+    .unwrap();
+
+    write_comment(
+        &ctx,
+        &id,
+        "Fixed in PR #42",
+        Some("PR #42"),
+        "@tester",
+        "main",
+    )
+    .unwrap();
+
+    let event_files = ctx.get_event_files().unwrap();
+    let content = fs::read_to_string(&event_files[0]).unwrap();
+    let lines: Vec<&str> = content.lines().collect();
+
+    let comment_event: serde_json::Value = serde_json::from_str(lines[1]).unwrap();
+    assert_eq!(comment_event["op"], "comment");
+    assert_eq!(comment_event["d"]["body"], "Fixed in PR #42");
+    assert_eq!(comment_event["d"]["ref"], "PR #42");
 }
 
 // Stream writer tests

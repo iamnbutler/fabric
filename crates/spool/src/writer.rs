@@ -208,6 +208,34 @@ pub fn assign_task(
     write_event(ctx, &event)
 }
 
+/// Add a comment to a task
+pub fn write_comment(
+    ctx: &SpoolContext,
+    id: &str,
+    body: &str,
+    r#ref: Option<&str>,
+    by: &str,
+    branch: &str,
+) -> Result<()> {
+    let mut d = serde_json::json!({ "body": body });
+
+    if let Some(r) = r#ref {
+        d["ref"] = serde_json::Value::String(r.to_string());
+    }
+
+    let event = Event {
+        v: 1,
+        op: Operation::Comment,
+        id: id.to_string(),
+        ts: Utc::now(),
+        by: by.to_string(),
+        branch: branch.to_string(),
+        d,
+    };
+
+    write_event(ctx, &event)
+}
+
 /// Set a task's stream (or remove from stream if None)
 pub fn set_stream(
     ctx: &SpoolContext,

@@ -9,7 +9,7 @@ use crate::writer::{
     create_stream as write_create_stream, create_task as write_create,
     delete_stream as write_delete_stream, get_current_branch, get_current_user,
     reopen_task as write_reopen, set_stream as write_stream, update_stream as write_update_stream,
-    update_task as write_update, CreateTaskParams,
+    update_task as write_update, write_comment as write_comment_fn, CreateTaskParams,
 };
 
 #[derive(Parser)]
@@ -137,6 +137,16 @@ pub enum Commands {
     Claim {
         /// Task ID to claim
         id: String,
+    },
+    /// Add a comment to a task
+    Comment {
+        /// Task ID to comment on
+        id: String,
+        /// Comment text
+        body: String,
+        /// Optional reference (e.g., PR link, issue number)
+        #[arg(short, long)]
+        r#ref: Option<String>,
     },
     /// Manage streams (workstreams/projects)
     Stream {
@@ -589,6 +599,24 @@ pub fn free_task(ctx: &SpoolContext, id: &str) -> Result<()> {
 
     write_assign(ctx, id, None, &user, &branch)?;
     println!("Freed task {} (unassigned)", id);
+
+    Ok(())
+}
+
+pub fn comment_task(ctx: &SpoolContext, id: &str, body: &str, r#ref: Option<&str>) -> Result<()> {
+    let state = load_or_materialize_state(ctx)?;
+
+    // Verify task exists
+    state
+        .tasks
+        .get(id)
+        .ok_or_else(|| anyhow!("Task not found: {}", id))?;
+
+    let user = get_current_user()?;
+    let branch = get_current_branch()?;
+
+    write_comment_fn(ctx, id, body, r#ref, &user, &branch)?;
+    println!("Added comment to task: {}", id);
 
     Ok(())
 }

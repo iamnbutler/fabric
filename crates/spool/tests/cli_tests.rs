@@ -689,3 +689,36 @@ fn test_cli_parse_stream_delete() {
         panic!("Expected Stream command");
     }
 }
+
+#[test]
+fn test_cli_parse_comment() {
+    let cli = Cli::parse_from(["spool", "comment", "task-123", "This is a comment"]);
+
+    if let Commands::Comment { id, body, r#ref } = cli.command {
+        assert_eq!(id, "task-123");
+        assert_eq!(body, "This is a comment");
+        assert!(r#ref.is_none());
+    } else {
+        panic!("Expected Comment command");
+    }
+}
+
+#[test]
+fn test_cli_parse_comment_with_ref() {
+    let cli = Cli::parse_from([
+        "spool",
+        "comment",
+        "task-456",
+        "Fixed in PR #99",
+        "--ref",
+        "PR #99",
+    ]);
+
+    if let Commands::Comment { id, body, r#ref } = cli.command {
+        assert_eq!(id, "task-456");
+        assert_eq!(body, "Fixed in PR #99");
+        assert_eq!(r#ref.as_deref(), Some("PR #99"));
+    } else {
+        panic!("Expected Comment command");
+    }
+}
