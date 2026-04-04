@@ -13,8 +13,7 @@ use crate::writer::{
 };
 
 #[derive(Parser)]
-#[command(name = "spool")]
-#[command(about = "Git-native task management system")]
+#[command(name = "spool", version, about = "Git-native task management system")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
