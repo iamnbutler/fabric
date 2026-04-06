@@ -1,13 +1,13 @@
 {
-  "last_run": "2026-04-05",
-  "last_run_id": "23992429266",
+  "last_run": "2026-04-06",
+  "last_run_id": "24016141635",
   "monthly_activity_issue": 74,
   "monthly_activity_month": "2026-04",
   "monthly_activity_issue_note": "Issue #74 confirmed open, updated this run",
   "backlog_cursor": null,
   "comments_made": {
     "issues": [48, 49, 50, 51, 52, 65, 70, 71, 73],
-    "prs": [54, 56, 58, 67, 68, 69]
+    "prs": [54, 56, 58, 67, 68, 69, 72]
   },
   "fix_attempts": {
     "50": "PR #53 (merged)",
@@ -20,20 +20,21 @@
   "improvement_attempts": {
     "docs-stream-name-filter": "PR #59 (open)",
     "fix-update-no-fields": "PR #57 (open)",
-    "deps-update-2026-03-05": "PR #60 (open, kept current through 2026-03-31)",
+    "deps-update-2026-03-05": "PR #60 (open, updated 2026-04-06 with 11 more crates, all tests pass)",
     "test-archive-validate-cli": "PR #66 (open)",
     "feat-update-tags": "PR #64 (open)",
     "release-v1.2.1": "PR #55 (open, CHANGELOG accurate as of 2026-04-04)",
     "feat-comment-command": "PR #75 (open, created 2026-04-02)",
     "version-flag": "PR #76 (open, created 2026-04-04)"
   },
-  "deps_last_checked": "2026-03-31",
+  "deps_last_checked": "2026-04-06",
   "deps_pr": 60,
   "deps_pr_branch": "repo-assist/deps-update-2026-03-05-7ddf94a021c0519c",
   "stale_pr_nudges": {
     "67": "2026-04-05",
     "68": "2026-04-05",
-    "69": "2026-04-05"
+    "69": "2026-04-05",
+    "72": "2026-04-06"
   },
   "welcomed_contributors": [],
   "labels_applied": {
@@ -43,14 +44,14 @@
     "task1_triage": "2026-04-03",
     "task2_fix_issues": "2026-03-19",
     "task3_improvements": "2026-04-04",
-    "task4_deps": "2026-03-31",
+    "task4_deps": "2026-04-06",
     "task5_maintain_prs": "2026-04-03",
-    "task6_stale_nudges": "2026-04-05",
+    "task6_stale_nudges": "2026-04-06",
     "task7_labels": "2026-04-03",
     "task8_release": "2026-04-04",
     "task9_welcome": "2026-03-26",
     "task10_forward": "2026-04-02",
-    "task11_monthly_summary": "2026-04-05"
+    "task11_monthly_summary": "2026-04-06"
   },
-  "notes": "April 2026. Nudged maintainer PRs #67, #68, #69 (stale 14+ days as of 2026-04-05). PR #72 nudge deferred to next run (3-nudge per run limit). All open issues (#49, #51, #52, #70, #71, #73) have Repo Assist comments. Repo Assist PRs #54, #56, #58 superseded (pending maintainer closure). PR #60 (deps) last updated 2026-03-31 — recheck next run. PR #55 CHANGELOG accurate. Priorities next run: Task 6 (nudge PR #72, eligible now), Task 9 (welcome, since 2026-03-26), Task 2 (fix issues, since 2026-03-19), Task 4 (deps recheck)."
+  "notes": "April 2026. PR #72 nudged 2026-04-06 (15 days stale, CI unstable — may need rebase). Deps PR #60 updated 2026-04-06 with cc, fastrand, indexmap, libc, semver, wasm-bindgen ecosystem updates (11 crates). All open issues (#49, #51, #52, #70, #71, #73) have Repo Assist comments. Repo Assist PRs #54, #56, #58 superseded (pending maintainer closure). Priorities next run: Task 1 (triage — check for any new issues), Task 2 (fix issues — oldest pending since 2026-03-19), Task 9 (welcome — since 2026-03-26), Task 7 (labels), Task 5 (check CI on PRs #75 and #76 which showed pending status)."
 }
