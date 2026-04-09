@@ -327,7 +327,11 @@ pub fn show_task(ctx: &SpoolContext, id: &str, show_events: bool) -> Result<()> 
     println!("Title:    {}", task.title);
     println!("Status:   {:?}", task.status);
     if let Some(s) = &task.stream {
-        println!("Stream:   {}", s);
+        if let Some(stream) = state.streams.get(s) {
+            println!("Stream:   {} ({})", stream.name, s);
+        } else {
+            println!("Stream:   {}", s);
+        }
     }
     if let Some(p) = &task.priority {
         println!("Priority: {}", p);
