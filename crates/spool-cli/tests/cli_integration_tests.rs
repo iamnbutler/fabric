@@ -945,3 +945,48 @@ fn test_stream_list_json_format() {
         .stdout(predicate::str::contains("\"name\":"))
         .stdout(predicate::str::contains("JSON Stream"));
 }
+
+#[test]
+fn test_show_task_displays_stream_name() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    // Create a stream
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["stream", "add", "my-feature"])
+        .assert()
+        .success();
+
+    // Get the stream ID
+    let output = spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["stream", "list", "--format", "ids"])
+        .output()
+        .unwrap();
+    let stream_id = String::from_utf8_lossy(&output.stdout).trim().to_string();
+
+    // Create a task in that stream
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["add", "Task in stream", "--stream", &stream_id])
+        .assert()
+        .success();
+
+    // Get the task ID
+    let output = spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["list", "--format", "ids"])
+        .output()
+        .unwrap();
+    let task_id = String::from_utf8_lossy(&output.stdout).trim().to_string();
+
+    // spool show should display the stream name alongside the stream ID
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["show", &task_id])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("my-feature"))
+        .stdout(predicate::str::contains(&stream_id));
+}
