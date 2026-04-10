@@ -1,6 +1,6 @@
 {
-  "last_run": "2026-04-09",
-  "last_run_id": "24169047492",
+  "last_run": "2026-04-10",
+  "last_run_id": "24223166006",
   "monthly_activity_issue": 74,
   "monthly_activity_month": "2026-04",
   "monthly_activity_issue_note": "Issue #74 confirmed open, updated this run",
@@ -15,7 +15,8 @@
     "51": "PR #56 (open, superseded by #67)",
     "52": "PR #54 (open, superseded by #68)",
     "48": "PR #62 (spool block/unblock, open), PR #63 (TUI deps, open)",
-    "71": "PR #72 (spool start/stop, open)"
+    "71": "PR #72 (spool start/stop, open)",
+    "utf8-truncation": "PR created 2026-04-10 (number TBD — branch repo-assist/fix-utf8-string-truncation-5b7e3a2), fix byte-slicing panic in list_tasks/list_streams/show_stream"
   },
   "improvement_attempts": {
     "docs-stream-name-filter": "PR #59 (open)",
@@ -44,7 +45,7 @@
   },
   "task_last_run": {
     "task1_triage": "2026-04-09",
-    "task2_fix_issues": "2026-03-19",
+    "task2_fix_issues": "2026-04-10",
     "task3_improvements": "2026-04-04",
     "task4_deps": "2026-04-06",
     "task5_maintain_prs": "2026-04-07",
@@ -53,11 +54,11 @@
     "task8_release": "2026-04-04",
     "task9_welcome": "2026-04-07",
     "task10_forward": "2026-04-09",
-    "task11_monthly_summary": "2026-04-09"
+    "task11_monthly_summary": "2026-04-10"
   },
   "pr_ci_status": {
     "note": "All PRs show pending CI with 0 checks — infrastructure issue, not a code issue. Repo Assist PRs #62, #66, #75, #76, #77, #78 expected to have mergeable_state: clean. PR #72 (maintainer) has mergeable_state: unstable.",
     "checked": "2026-04-09"
   },
-  "notes": "April 2026. All open issues (#49, #51, #52, #70, #71, #73) have Repo Assist comments. Repo Assist PRs #54, #56, #58 superseded (pending maintainer closure). Maintainer PRs #67-69 nudged 2026-04-05 (still open, 21+ days). PR #72 nudged 2026-04-06 (CI unstable). PR #78 created 2026-04-09: spool show now displays stream name alongside ID. Priorities next run: Task 2 (fix issues — last 2026-03-19; check if new bugs exist), Task 5 (maintain PRs — check #78 for conflicts), Task 8 (release — CHANGELOG needs update once maintainer PRs merge)."
+  "notes": "April 2026. All open issues (#49, #51, #52, #70, #71, #73) have Repo Assist comments. Repo Assist PRs #54, #56, #58 superseded (pending maintainer closure). Maintainer PRs #67-69 nudged 2026-04-05 (still open, 21+ days). PR #72 nudged 2026-04-06 (CI unstable). PR #78 created 2026-04-09: spool show now displays stream name. UTF-8 truncation fix PR created 2026-04-10 (branch: repo-assist/fix-utf8-string-truncation-5b7e3a2, number TBD) — confirms next run. Priorities next run: Task 5 (confirm new PR number, check for conflicts), Task 3/10 (further improvements), Task 8 (release — CHANGELOG needs update once maintainer PRs merge)."
 }
