@@ -211,6 +211,20 @@ impl OutputFormat {
     }
 }
 
+/// Truncate a string to at most `max_chars` Unicode characters.
+/// If truncated, replaces the last three positions with "...".
+fn truncate_str(s: &str, max_chars: usize) -> String {
+    if s.chars().count() <= max_chars {
+        return s.to_owned();
+    }
+    let end = s
+        .char_indices()
+        .nth(max_chars.saturating_sub(3))
+        .map(|(i, _)| i)
+        .unwrap_or(s.len());
+    format!("{}...", &s[..end])
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn list_tasks(
     ctx: &SpoolContext,
@@ -299,11 +313,7 @@ pub fn list_tasks(
             for task in &tasks {
                 let priority = task.priority.as_deref().unwrap_or("-");
                 let assignee = task.assignee.as_deref().unwrap_or("-");
-                let title = if task.title.len() > 50 {
-                    format!("{}...", &task.title[..47])
-                } else {
-                    task.title.clone()
-                };
+                let title = truncate_str(&task.title, 50);
                 println!(
                     "{:<15} {:<10} {:<12} {}",
                     task.id, priority, assignee, title
@@ -650,11 +660,7 @@ pub fn list_streams(ctx: &SpoolContext, format: OutputFormat) -> Result<()> {
                     .get(stream.id.as_str())
                     .copied()
                     .unwrap_or((0, 0));
-                let name = if stream.name.len() > 18 {
-                    format!("{}...", &stream.name[..15])
-                } else {
-                    stream.name.clone()
-                };
+                let name = truncate_str(&stream.name, 18);
                 println!(
                     "{:<15} {:<20} {:<10} {:<10}",
                     stream.id, name, open, complete
@@ -716,11 +722,7 @@ pub fn show_stream(ctx: &SpoolContext, id: Option<&str>, name: Option<&str>) -> 
                 TaskStatus::Complete => "complete",
             };
             let priority = task.priority.as_deref().unwrap_or("-");
-            let title = if task.title.len() > 40 {
-                format!("{}...", &task.title[..37])
-            } else {
-                task.title.clone()
-            };
+            let title = truncate_str(&task.title, 40);
             println!("{:<15} {:<10} {:<10} {}", task.id, status, priority, title);
         }
     }
