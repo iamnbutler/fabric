@@ -12,6 +12,23 @@ use crate::writer::{
     update_task as write_update, CreateTaskParams,
 };
 
+const VALID_PRIORITIES: &[&str] = &["p0", "p1", "p2", "p3"];
+
+fn validate_priority(p: &str) -> Result<()> {
+    if !VALID_PRIORITIES.contains(&p) {
+        anyhow::bail!("Invalid priority '{}'. Must be one of: p0, p1, p2, p3", p);
+    }
+    Ok(())
+}
+
+fn normalise_assignee(a: &str) -> String {
+    if a.starts_with('@') {
+        a.to_string()
+    } else {
+        format!("@{a}")
+    }
+}
+
 #[derive(Parser)]
 #[command(name = "spool")]
 #[command(about = "Git-native task management system")]
@@ -448,6 +465,10 @@ pub fn update_task(
     priority: Option<&str>,
     stream: Option<&str>,
 ) -> Result<()> {
+    if let Some(p) = priority {
+        validate_priority(p)?;
+    }
+
     let state = load_or_materialize_state(ctx)?;
 
     // Verify task exists
@@ -507,6 +528,11 @@ pub fn add_task(
     tags: Vec<String>,
     stream: Option<&str>,
 ) -> Result<()> {
+    if let Some(p) = priority {
+        validate_priority(p)?;
+    }
+    let normalised_assignee = assignee.map(normalise_assignee);
+
     // If setting a stream, verify it exists
     if let Some(s) = stream {
         let state = load_or_materialize_state(ctx)?;
@@ -527,7 +553,7 @@ pub fn add_task(
             title,
             description,
             priority,
-            assignee,
+            assignee: normalised_assignee.as_deref(),
             tags,
             stream,
         },
@@ -551,8 +577,9 @@ pub fn assign_task(ctx: &SpoolContext, id: &str, assignee: &str) -> Result<()> {
     let user = get_current_user()?;
     let branch = get_current_branch()?;
 
-    write_assign(ctx, id, Some(assignee), &user, &branch)?;
-    println!("Assigned task {} to {}", id, assignee);
+    let normalised = normalise_assignee(assignee);
+    write_assign(ctx, id, Some(&normalised), &user, &branch)?;
+    println!("Assigned task {} to {}", id, normalised);
 
     Ok(())
 }
