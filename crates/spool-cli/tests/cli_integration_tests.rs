@@ -945,3 +945,99 @@ fn test_stream_list_json_format() {
         .stdout(predicate::str::contains("\"name\":"))
         .stdout(predicate::str::contains("JSON Stream"));
 }
+
+#[test]
+fn test_add_rejects_invalid_priority() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["add", "My task", "--priority", "urgent"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Invalid priority"));
+}
+
+#[test]
+fn test_add_accepts_valid_priorities() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    for priority in &["p0", "p1", "p2", "p3"] {
+        spool_cmd()
+            .current_dir(temp_dir.path())
+            .args(["add", &format!("Task {priority}"), "--priority", priority])
+            .assert()
+            .success();
+    }
+}
+
+#[test]
+fn test_add_normalises_assignee_without_at_prefix() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["add", "Assigned task", "--assignee", "alice"])
+        .assert()
+        .success();
+
+    // The stored assignee should have the @ prefix in list output
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["list"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("@alice"));
+}
+
+#[test]
+fn test_add_preserves_assignee_with_at_prefix() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["add", "Assigned task", "--assignee", "@bob"])
+        .assert()
+        .success();
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["list"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("@bob"));
+}
+
+#[test]
+fn test_update_rejects_invalid_priority() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    // Create a task first
+    let output = spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["add", "Update test task"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    let stdout = String::from_utf8_lossy(&output);
+    let id = stdout
+        .trim()
+        .strip_prefix("Created task: ")
+        .unwrap_or("")
+        .trim();
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["update", id, "--priority", "high"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Invalid priority"));
+}
