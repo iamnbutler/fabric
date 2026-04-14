@@ -1,12 +1,12 @@
 {
-  "last_run": "2026-04-13",
-  "last_run_id": "24322735418",
+  "last_run": "2026-04-14",
+  "last_run_id": "24377530065",
   "monthly_activity_issue": 74,
   "monthly_activity_month": "2026-04",
   "monthly_activity_issue_note": "Issue #74 confirmed open, updated this run",
   "backlog_cursor": null,
   "comments_made": {
-    "issues": [48, 49, 50, 51, 52, 65, 70, 71, 73],
+    "issues": [48, 49, 50, 51, 52, 65, 70, 71, 73, 80],
     "prs": [54, 56, 58, 67, 68, 69, 72]
   },
   "fix_attempts": {
@@ -17,7 +17,7 @@
     "48": "PR #62 (spool block/unblock, open), PR #63 (TUI deps, open)",
     "71": "PR #72 (spool start/stop, open)",
     "utf8-truncation": "PR #79 (open, created 2026-04-10)",
-    "80": "PR pending (created 2026-04-13, branch repo-assist/fix-issue-80-input-validation, fix priority validation + assignee normalisation, 265 tests pass, 5 new integration tests)"
+    "80": "PR #81 (open, created 2026-04-13, fix priority validation + assignee normalisation, 265 tests pass, 5 new integration tests)"
   },
   "improvement_attempts": {
     "docs-stream-name-filter": "PR #59 (open)",
@@ -30,7 +30,7 @@
     "version-flag": "PR #76 (open, created 2026-04-04)",
     "test-show-comments-blocks-stream": "PR #77 (open, created 2026-04-08, 5 new tests, 265 total passing)",
     "show-stream-name": "PR #78 (open, created 2026-04-09, display stream name in spool show, 261 tests pass)",
-    "cli-input-validation": "Issue #80 (filed 2026-04-12), fix PR pending (created 2026-04-13 from branch repo-assist/fix-issue-80-input-validation)"
+    "cli-input-validation": "Issue #80 (filed 2026-04-12), fix PR #81 (created 2026-04-13)"
   },
   "deps_last_checked": "2026-04-11",
   "deps_pr": 60,
@@ -46,21 +46,21 @@
     "71": ["help wanted"]
   },
   "task_last_run": {
-    "task1_triage": "2026-04-09",
-    "task2_fix_issues": "2026-04-13",
+    "task1_triage": "2026-04-14",
+    "task2_fix_issues": "2026-04-14",
     "task3_improvements": "2026-04-12",
     "task4_deps": "2026-04-11",
-    "task5_maintain_prs": "2026-04-12",
-    "task6_stale_nudges": "2026-04-06",
-    "task7_labels": "2026-04-07",
+    "task5_maintain_prs": "2026-04-14",
+    "task6_stale_nudges": "2026-04-14",
+    "task7_labels": "2026-04-14",
     "task8_release": "2026-04-12",
     "task9_welcome": "2026-04-07",
     "task10_forward": "2026-04-09",
-    "task11_monthly_summary": "2026-04-13"
+    "task11_monthly_summary": "2026-04-14"
   },
   "pr_ci_status": {
-    "note": "All PRs show pending CI with 0 checks — infrastructure issue, not a code issue. Repo Assist PRs #62, #66, #75, #76, #77, #78, #79 expected clean. PR #72 (maintainer) has mergeable_state: unstable. New fix PR for #80 pending number assignment.",
-    "checked": "2026-04-13"
+    "note": "All Repo Assist PRs show clean mergeable_state (except #60 unknown — computing). PR #72 (maintainer) has mergeable_state: unstable. No merge conflicts found in any Repo Assist PRs.",
+    "checked": "2026-04-14"
   },
-  "notes": "April 2026. All open issues have Repo Assist comments. Issue #80 (CLI input validation) now has a fix PR created 2026-04-13 (branch repo-assist/fix-issue-80-input-validation, number TBD — likely #81). 265 tests pass (5 new). Maintainer PRs #67-69 nudged 2026-04-05 (still open, 24+ days). PR #72 nudged 2026-04-06 (CI unstable, 7 days ago). Fix PR for #80 will appear in suggested actions once number confirmed. Next run priorities: Task 1 (triage — check for new issues, confirm new PR number), Task 6 (stale nudges — #67-69 now 24+ days, #72 7 days, consider second nudge if maintainer unresponsive), Task 7 (labels), Task 4 (deps — last checked 2026-04-11, due again)."
+  "notes": "April 2026. All open issues have Repo Assist comments (including #80 commented 2026-04-14). PR #81 is the fix for #80 (clean, draft, all 265 tests pass). Maintainer PRs #67-69 nudged 2026-04-05 (9 days ago from last update), #72 nudged 2026-04-06 (8 days ago). Next stale nudge threshold for #67-69: 2026-04-19 (14 days from last update). Next stale nudge threshold for #72: 2026-04-20. Next run priorities: Task 8 (release — last 2026-04-12, check if CHANGELOG needs update), Task 9 (welcome — last 2026-04-07), Task 3 (improvements — last 2026-04-12), Task 10 (forward progress — last 2026-04-09). Deps last checked 2026-04-11 — consider again around 2026-04-18."
 }
