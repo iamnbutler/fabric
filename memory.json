@@ -1,6 +1,6 @@
 {
-  "last_run": "2026-04-14",
-  "last_run_id": "24377530065",
+  "last_run": "2026-04-15",
+  "last_run_id": "24433104528",
   "monthly_activity_issue": 74,
   "monthly_activity_month": "2026-04",
   "monthly_activity_issue_note": "Issue #74 confirmed open, updated this run",
@@ -14,7 +14,7 @@
     "49": "PR #58 (open, superseded by #69)",
     "51": "PR #56 (open, superseded by #67)",
     "52": "PR #54 (open, superseded by #68)",
-    "48": "PR #62 (spool block/unblock, open), PR #63 (TUI deps, open)",
+    "48": "PR #62 (spool block/unblock, open, updated 2026-04-15 with cycle detection), PR #63 (TUI deps, open)",
     "71": "PR #72 (spool start/stop, open)",
     "utf8-truncation": "PR #79 (open, created 2026-04-10)",
     "80": "PR #81 (open, created 2026-04-13, fix priority validation + assignee normalisation, 265 tests pass, 5 new integration tests)"
@@ -30,7 +30,8 @@
     "version-flag": "PR #76 (open, created 2026-04-04)",
     "test-show-comments-blocks-stream": "PR #77 (open, created 2026-04-08, 5 new tests, 265 total passing)",
     "show-stream-name": "PR #78 (open, created 2026-04-09, display stream name in spool show, 261 tests pass)",
-    "cli-input-validation": "Issue #80 (filed 2026-04-12), fix PR #81 (created 2026-04-13)"
+    "cli-input-validation": "Issue #80 (filed 2026-04-12), fix PR #81 (created 2026-04-13)",
+    "cycle-detection-pr62": "PR #62 updated 2026-04-15 — added BFS cycle detection to spool block; 2 new integration tests; 269 tests pass"
   },
   "deps_last_checked": "2026-04-11",
   "deps_pr": 60,
@@ -50,17 +51,17 @@
     "task2_fix_issues": "2026-04-14",
     "task3_improvements": "2026-04-12",
     "task4_deps": "2026-04-11",
-    "task5_maintain_prs": "2026-04-14",
+    "task5_maintain_prs": "2026-04-15",
     "task6_stale_nudges": "2026-04-14",
     "task7_labels": "2026-04-14",
     "task8_release": "2026-04-12",
     "task9_welcome": "2026-04-07",
-    "task10_forward": "2026-04-09",
-    "task11_monthly_summary": "2026-04-14"
+    "task10_forward": "2026-04-15",
+    "task11_monthly_summary": "2026-04-15"
   },
   "pr_ci_status": {
-    "note": "All Repo Assist PRs show clean mergeable_state (except #60 unknown — computing). PR #72 (maintainer) has mergeable_state: unstable. No merge conflicts found in any Repo Assist PRs.",
-    "checked": "2026-04-14"
+    "note": "All Repo Assist PRs show clean mergeable_state. PR #62 updated with cycle detection (clean). PR #72 (maintainer) has mergeable_state: unstable. No merge conflicts found in any Repo Assist PRs.",
+    "checked": "2026-04-15"
   },
-  "notes": "April 2026. All open issues have Repo Assist comments (including #80 commented 2026-04-14). PR #81 is the fix for #80 (clean, draft, all 265 tests pass). Maintainer PRs #67-69 nudged 2026-04-05 (9 days ago from last update), #72 nudged 2026-04-06 (8 days ago). Next stale nudge threshold for #67-69: 2026-04-19 (14 days from last update). Next stale nudge threshold for #72: 2026-04-20. Next run priorities: Task 8 (release — last 2026-04-12, check if CHANGELOG needs update), Task 9 (welcome — last 2026-04-07), Task 3 (improvements — last 2026-04-12), Task 10 (forward progress — last 2026-04-09). Deps last checked 2026-04-11 — consider again around 2026-04-18."
+  "notes": "April 2026. All open issues have Repo Assist comments. PR #62 updated 2026-04-15 with cycle detection (BFS prevents circular dependency graphs, 2 new tests, 269 total pass). PR #81 fixes #80 (clean draft). Maintainer PRs #67-69 nudged 2026-04-05 (10 days ago); next nudge threshold 2026-04-19. PR #72 nudged 2026-04-06; next nudge threshold 2026-04-20. Deps last checked 2026-04-11 — consider again around 2026-04-18. Next run priorities: Task 9 (welcome — last 2026-04-07), Task 8 (release — last 2026-04-12), Task 3 (improvements — last 2026-04-12), Task 4 (deps — last 2026-04-11)."
 }
