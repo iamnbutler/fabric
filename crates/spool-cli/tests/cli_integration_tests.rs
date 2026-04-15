@@ -686,6 +686,64 @@ fn test_unblock_tasks_not_found() {
         .stderr(predicate::str::contains("not found"));
 }
 
+#[test]
+fn test_block_tasks_direct_cycle_error() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+    // A blocks B already; trying B blocks A should fail
+    write_test_events(
+        &temp_dir,
+        concat!(
+            r#"{"v":1,"op":"create","id":"task-001","ts":"2024-01-15T10:00:00Z","by":"@tester","branch":"main","d":{"title":"Auth fix"}}"#,
+            "\n",
+            r#"{"v":1,"op":"create","id":"task-002","ts":"2024-01-15T10:01:00Z","by":"@tester","branch":"main","d":{"title":"Deploy"}}"#,
+            "\n",
+            r#"{"v":1,"op":"link","id":"task-001","ts":"2024-01-15T10:02:00Z","by":"@tester","branch":"main","d":{"rel":"blocks","target":"task-002"}}"#,
+            "\n",
+            r#"{"v":1,"op":"link","id":"task-002","ts":"2024-01-15T10:02:00Z","by":"@tester","branch":"main","d":{"rel":"blocked_by","target":"task-001"}}"#,
+        ),
+    );
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["block", "task-002", "task-001"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cycle"));
+}
+
+#[test]
+fn test_block_tasks_indirect_cycle_error() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+    // A blocks B, B blocks C; trying C blocks A should fail
+    write_test_events(
+        &temp_dir,
+        concat!(
+            r#"{"v":1,"op":"create","id":"task-001","ts":"2024-01-15T10:00:00Z","by":"@tester","branch":"main","d":{"title":"Task A"}}"#,
+            "\n",
+            r#"{"v":1,"op":"create","id":"task-002","ts":"2024-01-15T10:01:00Z","by":"@tester","branch":"main","d":{"title":"Task B"}}"#,
+            "\n",
+            r#"{"v":1,"op":"create","id":"task-003","ts":"2024-01-15T10:02:00Z","by":"@tester","branch":"main","d":{"title":"Task C"}}"#,
+            "\n",
+            r#"{"v":1,"op":"link","id":"task-001","ts":"2024-01-15T10:03:00Z","by":"@tester","branch":"main","d":{"rel":"blocks","target":"task-002"}}"#,
+            "\n",
+            r#"{"v":1,"op":"link","id":"task-002","ts":"2024-01-15T10:03:00Z","by":"@tester","branch":"main","d":{"rel":"blocked_by","target":"task-001"}}"#,
+            "\n",
+            r#"{"v":1,"op":"link","id":"task-002","ts":"2024-01-15T10:04:00Z","by":"@tester","branch":"main","d":{"rel":"blocks","target":"task-003"}}"#,
+            "\n",
+            r#"{"v":1,"op":"link","id":"task-003","ts":"2024-01-15T10:04:00Z","by":"@tester","branch":"main","d":{"rel":"blocked_by","target":"task-002"}}"#,
+        ),
+    );
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["block", "task-003", "task-001"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cycle"));
+}
+
 // ==========================================
 // List filter tests
 // ==========================================

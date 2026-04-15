@@ -607,6 +607,35 @@ pub fn free_task(ctx: &SpoolContext, id: &str) -> Result<()> {
     Ok(())
 }
 
+/// Returns true if adding the edge blocker → blocked would create a dependency cycle.
+///
+/// Performs a BFS from `blocked` following existing `blocks` edges.  If it can
+/// reach `blocker`, adding the proposed edge would close a cycle.
+fn would_create_cycle(
+    tasks: &std::collections::HashMap<String, Task>,
+    blocker: &str,
+    blocked: &str,
+) -> bool {
+    use std::collections::{HashSet, VecDeque};
+    let mut visited: HashSet<String> = HashSet::new();
+    let mut queue: VecDeque<String> = VecDeque::new();
+    queue.push_back(blocked.to_string());
+    while let Some(current) = queue.pop_front() {
+        if current == blocker {
+            return true;
+        }
+        if !visited.insert(current.clone()) {
+            continue;
+        }
+        if let Some(task) = tasks.get(&current) {
+            for downstream in &task.blocks {
+                queue.push_back(downstream.clone());
+            }
+        }
+    }
+    false
+}
+
 /// Mark blocker as blocking blocked — writes bidirectional Link events
 pub fn block_tasks(ctx: &SpoolContext, blocker: &str, blocked: &str) -> Result<()> {
     if blocker == blocked {
@@ -623,6 +652,15 @@ pub fn block_tasks(ctx: &SpoolContext, blocker: &str, blocked: &str) -> Result<(
         .tasks
         .get(blocked)
         .ok_or_else(|| anyhow!("Task not found: {}", blocked))?;
+
+    if would_create_cycle(&state.tasks, blocker, blocked) {
+        return Err(anyhow!(
+            "Adding this dependency would create a cycle: {} → {} → … → {}",
+            blocker,
+            blocked,
+            blocker
+        ));
+    }
 
     let user = get_current_user()?;
     let branch = get_current_branch()?;
