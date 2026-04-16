@@ -1,6 +1,6 @@
 {
-  "last_run": "2026-04-15",
-  "last_run_id": "24433104528",
+  "last_run": "2026-04-16",
+  "last_run_id": "24488589977",
   "monthly_activity_issue": 74,
   "monthly_activity_month": "2026-04",
   "monthly_activity_issue_note": "Issue #74 confirmed open, updated this run",
@@ -25,7 +25,7 @@
     "deps-update-2026-03-05": "PR #60 (open, updated 2026-04-11 with 11 more crates — cc, fastrand, hashbrown, indexmap, libredox, wasm-bindgen ecosystem — 260 tests pass, 40+ total crate updates)",
     "test-archive-validate-cli": "PR #66 (open)",
     "feat-update-tags": "PR #64 (open)",
-    "release-v1.2.1": "PR #55 (open, CHANGELOG accurate as of 2026-04-12 — includes PR #53 fix)",
+    "release-v1.2.1": "PR #55 (open, CHANGELOG accurate as of 2026-04-12 — includes PR #53 fix; mergeable_state: clean as of 2026-04-16)",
     "feat-comment-command": "PR #75 (open, created 2026-04-02)",
     "version-flag": "PR #76 (open, created 2026-04-04)",
     "test-show-comments-blocks-stream": "PR #77 (open, created 2026-04-08, 5 new tests, 265 total passing)",
@@ -46,22 +46,22 @@
   "labels_applied": {
     "71": ["help wanted"]
   },
+  "pr_ci_status": {
+    "note": "All Repo Assist PRs show clean mergeable_state as of 2026-04-16. PR #55 (release): clean. PR #57 (fix update no-fields): clean. PR #63 (TUI blocks): clean. Maintainer PRs #67 (stream prune): clean. PRs #68, #69, #72: unstable — normal behavior, no CI configured, pending state with 0 checks. No merge conflicts in any PRs.",
+    "checked": "2026-04-16"
+  },
   "task_last_run": {
     "task1_triage": "2026-04-14",
     "task2_fix_issues": "2026-04-14",
     "task3_improvements": "2026-04-12",
     "task4_deps": "2026-04-11",
-    "task5_maintain_prs": "2026-04-15",
-    "task6_stale_nudges": "2026-04-14",
+    "task5_maintain_prs": "2026-04-16",
+    "task6_stale_nudges": "2026-04-16",
     "task7_labels": "2026-04-14",
-    "task8_release": "2026-04-12",
-    "task9_welcome": "2026-04-07",
+    "task8_release": "2026-04-16",
+    "task9_welcome": "2026-04-16",
     "task10_forward": "2026-04-15",
-    "task11_monthly_summary": "2026-04-15"
+    "task11_monthly_summary": "2026-04-16"
   },
-  "pr_ci_status": {
-    "note": "All Repo Assist PRs show clean mergeable_state. PR #62 updated with cycle detection (clean). PR #72 (maintainer) has mergeable_state: unstable. No merge conflicts found in any Repo Assist PRs.",
-    "checked": "2026-04-15"
-  },
-  "notes": "April 2026. All open issues have Repo Assist comments. PR #62 updated 2026-04-15 with cycle detection (BFS prevents circular dependency graphs, 2 new tests, 269 total pass). PR #81 fixes #80 (clean draft). Maintainer PRs #67-69 nudged 2026-04-05 (10 days ago); next nudge threshold 2026-04-19. PR #72 nudged 2026-04-06; next nudge threshold 2026-04-20. Deps last checked 2026-04-11 — consider again around 2026-04-18. Next run priorities: Task 9 (welcome — last 2026-04-07), Task 8 (release — last 2026-04-12), Task 3 (improvements — last 2026-04-12), Task 4 (deps — last 2026-04-11)."
+  "notes": "April 2026. All open issues have Repo Assist comments. All Repo Assist PRs verified clean (no merge conflicts) on 2026-04-16. Maintainer PRs #67-69 nudged 2026-04-05; next nudge threshold 2026-04-19. PR #72 nudged 2026-04-06; next nudge threshold 2026-04-20. Deps last checked 2026-04-11 — check again on 2026-04-18. Next run priorities: Task 4 (deps — due 2026-04-18), Task 3 (improvements — last 2026-04-12), Task 6 (stale nudges — thresholds 2026-04-19 for #67-69, 2026-04-20 for #72), Task 1 (triage — last 2026-04-14)."
 }
