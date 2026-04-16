@@ -9,7 +9,7 @@ use crate::writer::{
     create_stream as write_create_stream, create_task as write_create,
     delete_stream as write_delete_stream, get_current_branch, get_current_user,
     reopen_task as write_reopen, set_stream as write_stream, update_stream as write_update_stream,
-    update_task as write_update, CreateTaskParams,
+    update_task as write_update, write_link, write_unlink, CreateTaskParams,
 };
 
 #[derive(Parser)]
@@ -137,6 +137,20 @@ pub enum Commands {
     Claim {
         /// Task ID to claim
         id: String,
+    },
+    /// Mark a task as blocking another task (blocker must complete first)
+    Block {
+        /// Task ID that is doing the blocking
+        blocker: String,
+        /// Task ID that is being blocked
+        blocked: String,
+    },
+    /// Remove a blocking relationship between tasks
+    Unblock {
+        /// Task ID that was blocking
+        blocker: String,
+        /// Task ID that was blocked
+        blocked: String,
     },
     /// Manage streams (workstreams/projects)
     Stream {
@@ -589,6 +603,96 @@ pub fn free_task(ctx: &SpoolContext, id: &str) -> Result<()> {
 
     write_assign(ctx, id, None, &user, &branch)?;
     println!("Freed task {} (unassigned)", id);
+
+    Ok(())
+}
+
+/// Returns true if adding the edge blocker → blocked would create a dependency cycle.
+///
+/// Performs a BFS from `blocked` following existing `blocks` edges.  If it can
+/// reach `blocker`, adding the proposed edge would close a cycle.
+fn would_create_cycle(
+    tasks: &std::collections::HashMap<String, Task>,
+    blocker: &str,
+    blocked: &str,
+) -> bool {
+    use std::collections::{HashSet, VecDeque};
+    let mut visited: HashSet<String> = HashSet::new();
+    let mut queue: VecDeque<String> = VecDeque::new();
+    queue.push_back(blocked.to_string());
+    while let Some(current) = queue.pop_front() {
+        if current == blocker {
+            return true;
+        }
+        if !visited.insert(current.clone()) {
+            continue;
+        }
+        if let Some(task) = tasks.get(&current) {
+            for downstream in &task.blocks {
+                queue.push_back(downstream.clone());
+            }
+        }
+    }
+    false
+}
+
+/// Mark blocker as blocking blocked — writes bidirectional Link events
+pub fn block_tasks(ctx: &SpoolContext, blocker: &str, blocked: &str) -> Result<()> {
+    if blocker == blocked {
+        return Err(anyhow!("A task cannot block itself"));
+    }
+
+    let state = load_or_materialize_state(ctx)?;
+
+    state
+        .tasks
+        .get(blocker)
+        .ok_or_else(|| anyhow!("Task not found: {}", blocker))?;
+    state
+        .tasks
+        .get(blocked)
+        .ok_or_else(|| anyhow!("Task not found: {}", blocked))?;
+
+    if would_create_cycle(&state.tasks, blocker, blocked) {
+        return Err(anyhow!(
+            "Adding this dependency would create a cycle: {} → {} → … → {}",
+            blocker,
+            blocked,
+            blocker
+        ));
+    }
+
+    let user = get_current_user()?;
+    let branch = get_current_branch()?;
+
+    write_link(ctx, blocker, "blocks", blocked, &user, &branch)?;
+    write_link(ctx, blocked, "blocked_by", blocker, &user, &branch)?;
+
+    println!("Marked {} as blocking {}", blocker, blocked);
+
+    Ok(())
+}
+
+/// Remove the blocking relationship between two tasks
+pub fn unblock_tasks(ctx: &SpoolContext, blocker: &str, blocked: &str) -> Result<()> {
+    let state = load_or_materialize_state(ctx)?;
+
+    state
+        .tasks
+        .get(blocker)
+        .ok_or_else(|| anyhow!("Task not found: {}", blocker))?;
+    state
+        .tasks
+        .get(blocked)
+        .ok_or_else(|| anyhow!("Task not found: {}", blocked))?;
+
+    let user = get_current_user()?;
+    let branch = get_current_branch()?;
+
+    write_unlink(ctx, blocker, "blocks", blocked, &user, &branch)?;
+    write_unlink(ctx, blocked, "blocked_by", blocker, &user, &branch)?;
+
+    println!("{} no longer blocks {}", blocker, blocked);
 
     Ok(())
 }

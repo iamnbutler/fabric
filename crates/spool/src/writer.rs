@@ -338,3 +338,47 @@ pub fn delete_stream(ctx: &SpoolContext, id: &str, by: &str, branch: &str) -> Re
 
     write_event(ctx, &event)
 }
+
+/// Write a Link event to record a relationship between tasks
+pub fn write_link(
+    ctx: &SpoolContext,
+    id: &str,
+    rel: &str,
+    target: &str,
+    by: &str,
+    branch: &str,
+) -> Result<()> {
+    let event = Event {
+        v: 1,
+        op: Operation::Link,
+        id: id.to_string(),
+        ts: Utc::now(),
+        by: by.to_string(),
+        branch: branch.to_string(),
+        d: serde_json::json!({ "rel": rel, "target": target }),
+    };
+
+    write_event(ctx, &event)
+}
+
+/// Write an Unlink event to remove a relationship between tasks
+pub fn write_unlink(
+    ctx: &SpoolContext,
+    id: &str,
+    rel: &str,
+    target: &str,
+    by: &str,
+    branch: &str,
+) -> Result<()> {
+    let event = Event {
+        v: 1,
+        op: Operation::Unlink,
+        id: id.to_string(),
+        ts: Utc::now(),
+        by: by.to_string(),
+        branch: branch.to_string(),
+        d: serde_json::json!({ "rel": rel, "target": target }),
+    };
+
+    write_event(ctx, &event)
+}
