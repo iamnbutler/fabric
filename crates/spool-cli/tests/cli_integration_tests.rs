@@ -824,6 +824,62 @@ fn test_stream_delete_with_tasks_fails() {
 }
 
 #[test]
+fn test_stream_delete_with_only_archived_tasks_succeeds() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["stream", "add", "Completed Stream"])
+        .assert()
+        .success();
+
+    let id_output = spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["stream", "list", "--format", "ids"])
+        .assert()
+        .success();
+    let stream_id = String::from_utf8_lossy(&id_output.get_output().stdout)
+        .trim()
+        .to_string();
+
+    // Add a task to the stream
+    let add_output = spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["add", "Archived task", "--stream", &stream_id])
+        .assert()
+        .success();
+    let task_line = String::from_utf8_lossy(&add_output.get_output().stdout);
+    let task_id = task_line
+        .trim()
+        .strip_prefix("Created task: ")
+        .unwrap_or("")
+        .to_string();
+
+    // Complete the task
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["complete", &task_id])
+        .assert()
+        .success();
+
+    // Archive the completed task
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["archive", "--days", "0"])
+        .assert()
+        .success();
+
+    // Stream delete should now succeed (only archived tasks remain)
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["stream", "delete", &stream_id])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Deleted stream:"));
+}
+
+#[test]
 fn test_add_task_invalid_stream_fails() {
     let temp_dir = TempDir::new().unwrap();
     setup_initialized_spool(&temp_dir);
