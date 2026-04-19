@@ -770,11 +770,11 @@ pub fn delete_stream(ctx: &SpoolContext, id: &str) -> Result<()> {
         .get(id)
         .ok_or_else(|| anyhow!("Stream not found: {}", id))?;
 
-    // Check if any tasks are assigned to this stream
+    // Check if any non-archived tasks are assigned to this stream
     let task_count = state
         .tasks
         .values()
-        .filter(|t| t.stream.as_deref() == Some(id))
+        .filter(|t| t.stream.as_deref() == Some(id) && t.archived.is_none())
         .count();
 
     if task_count > 0 {
