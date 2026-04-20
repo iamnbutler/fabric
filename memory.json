@@ -1,6 +1,6 @@
 {
-  "last_run": "2026-04-19",
-  "last_run_id": "24618988329",
+  "last_run": "2026-04-20",
+  "last_run_id": "24645472154",
   "monthly_activity_issue": 74,
   "monthly_activity_month": "2026-04",
   "monthly_activity_issue_note": "Issue #74 confirmed open, updated this run",
@@ -11,28 +11,26 @@
   },
   "fix_attempts": {
     "50": "PR #53 (merged)",
-    "49": "PR #58 (open, superseded by #69)",
-    "51": "PR #56 (open, superseded by #67)",
-    "52": "PR #54 (open, superseded by #68)",
-    "48": "PR #62 (spool block/unblock, open, updated 2026-04-15 with cycle detection), PR #63 (TUI deps, open)",
-    "71": "PR #72 (spool start/stop, open)",
-    "utf8-truncation": "PR #79 (open, created 2026-04-10)",
-    "80": "PR #81 (open, created 2026-04-13, fix priority validation + assignee normalisation, 265 tests pass, 5 new integration tests)",
-    "stream-delete-archived": "PR #82 (open, created 2026-04-19, allow stream delete when only archived tasks remain, 1 new test, 261 total passing)"
+    "49": "PR #58 (closed by maintainer 2026-04-19/20)",
+    "51": "PR #56 (closed by maintainer); PR #67 (maintainer PR, closed 2026-04-19/20)",
+    "52": "PR #54 (closed by maintainer); PR #68 (maintainer PR, still open)",
+    "48": "PR #62 (spool block/unblock, open, clean)",
+    "71": "PR #72 (spool start/stop, maintainer PR, open)",
+    "utf8-truncation": "PR #79 (open, clean)",
+    "80": "PR #81 (open, clean, priority validation + assignee normalisation, 265 tests pass)",
+    "stream-delete-archived": "PR #82 (open, clean, allow stream delete when only archived tasks remain)"
   },
   "improvement_attempts": {
-    "docs-stream-name-filter": "PR #59 (open)",
-    "fix-update-no-fields": "PR #57 (open)",
-    "deps-update-2026-03-05": "PR #60 (open, updated 2026-04-18 with 9 more crates — assert_cmd, bitflags, clap, clap_derive, libc, rand, rayon, wasip2, wit-bindgen — 260 tests pass, 40+ total crate updates)",
-    "test-archive-validate-cli": "PR #66 (open)",
-    "feat-update-tags": "PR #64 (open)",
-    "release-v1.2.1": "PR #55 (open, CHANGELOG accurate as of 2026-04-12 — includes PR #53 fix; mergeable_state: clean as of 2026-04-16)",
-    "feat-comment-command": "PR #75 (open, created 2026-04-02)",
-    "version-flag": "PR #76 (open, created 2026-04-04)",
-    "test-show-comments-blocks-stream": "PR #77 (open, created 2026-04-08, 5 new tests, 265 total passing)",
-    "show-stream-name": "PR #78 (open, created 2026-04-09, display stream name in spool show, 261 tests pass)",
-    "cli-input-validation": "Issue #80 (filed 2026-04-12), fix PR #81 (created 2026-04-13)",
-    "cycle-detection-pr62": "PR #62 updated 2026-04-15 — added BFS cycle detection to spool block; 2 new integration tests; 269 tests pass"
+    "deps-update-2026-03-05": "PR #60 (open, 40+ crate updates, 260 tests pass, last updated 2026-04-18)",
+    "test-show-comments-blocks-stream": "PR #77 (open, draft, clean)",
+    "show-stream-name": "PR #78 (open, draft, clean)",
+    "cli-input-validation": "Issue #80 (filed 2026-04-12), fix PR #81 (open, clean)",
+    "cycle-detection-pr62": "PR #62 open, clean — BFS cycle detection added 2026-04-15"
+  },
+  "closed_by_maintainer": {
+    "note": "Maintainer did large PR cleanup ~2026-04-19/20, closing 12 PRs without merging",
+    "prs_closed": [54, 55, 56, 57, 58, 59, 63, 64, 66, 67, 75, 76],
+    "interpretation": "Last merge to main still PR #53 (2026-03-04). Maintainer appears to be selectively managing backlog."
   },
   "deps_last_checked": "2026-04-18",
   "deps_pr": 60,
@@ -48,21 +46,23 @@
     "71": ["help wanted"]
   },
   "pr_ci_status": {
-    "note": "PR #67 (stream prune): clean (verified 2026-04-19). PRs #68, #69, #72: unstable — normal behavior, no CI configured. All Repo Assist PRs clean as of 2026-04-16; no new changes to main since then.",
-    "checked": "2026-04-19"
+    "note": "All 7 open Repo Assist PRs clean as of 2026-04-20: #60 (mergeable unknown), #62 (clean), #77 (clean), #78 (clean), #79 (clean), #81 (clean), #82 (clean). Maintainer PRs #68, #69, #72 still open.",
+    "checked": "2026-04-20"
   },
+  "open_repo_assist_prs": [60, 62, 77, 78, 79, 81, 82],
+  "open_maintainer_prs": [68, 69, 72],
   "task_last_run": {
     "task1_triage": "2026-04-14",
     "task2_fix_issues": "2026-04-19",
     "task3_improvements": "2026-04-19",
     "task4_deps": "2026-04-18",
-    "task5_maintain_prs": "2026-04-19",
+    "task5_maintain_prs": "2026-04-20",
     "task6_stale_nudges": "2026-04-16",
     "task7_labels": "2026-04-14",
     "task8_release": "2026-04-16",
     "task9_welcome": "2026-04-16",
     "task10_forward": "2026-04-19",
-    "task11_monthly_summary": "2026-04-19"
+    "task11_monthly_summary": "2026-04-20"
   },
-  "notes": "April 2026. All open issues have Repo Assist comments. PR #67 clean (2026-04-19); PRs #68, #69, #72 unstable (normal). PR #82 created 2026-04-19 (stream delete archived tasks fix). Stale nudge next threshold: PRs #67-69 already past 2026-04-19 (decided not to re-nudge; already in monthly summary), PR #72 threshold 2026-04-20. Deps next check ~2026-04-25. Next run priorities: Task 1 (triage — last 2026-04-14), Task 7 (labels — last 2026-04-14), Task 6 (stale nudges for PR #72 — threshold 2026-04-20), Task 8 (release — last 2026-04-16)."
+  "notes": "April 2026. Maintainer closed 12 PRs (#54-59, #63-67, #75-76) without merging — large backlog cleanup. Last merge to main still PR #53 (2026-03-04). 10 open PRs remain (7 Repo Assist, 3 maintainer). All Repo Assist PRs conflict-free (Task 5 verified 2026-04-20). Next run priorities: Task 1 (triage — last 2026-04-14), Task 7 (labels — last 2026-04-14), Task 4 (deps — next check ~2026-04-25). Hold off on creating new PRs given active backlog management by maintainer."
 }
