@@ -1,5 +1,7 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use clap::{Parser, Subcommand};
+
+const VALID_RESOLUTIONS: &[&str] = &["done", "wontfix", "duplicate", "obsolete"];
 
 use crate::archive::collect_all_events;
 use crate::context::SpoolContext;
@@ -395,6 +397,17 @@ pub fn show_task(ctx: &SpoolContext, id: &str, show_events: bool) -> Result<()> 
 }
 
 pub fn complete_task(ctx: &SpoolContext, id: &str, resolution: Option<&str>) -> Result<()> {
+    // Validate resolution value before touching state
+    if let Some(r) = resolution {
+        if !VALID_RESOLUTIONS.contains(&r) {
+            bail!(
+                "Invalid resolution '{}'. Must be one of: {}",
+                r,
+                VALID_RESOLUTIONS.join(", ")
+            );
+        }
+    }
+
     let state = load_or_materialize_state(ctx)?;
 
     // Verify task exists

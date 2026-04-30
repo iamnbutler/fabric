@@ -257,6 +257,47 @@ fn test_complete_task_with_resolution() {
 }
 
 #[test]
+fn test_complete_task_invalid_resolution_errors() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+    write_test_events(
+        &temp_dir,
+        r#"{"v":1,"op":"create","id":"task-001","ts":"2024-01-15T10:00:00Z","by":"@tester","branch":"main","d":{"title":"Test task"}}"#,
+    );
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["complete", "task-001", "--resolution", "finished"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Invalid resolution 'finished'"))
+        .stderr(predicate::str::contains("done, wontfix, duplicate, obsolete"));
+}
+
+#[test]
+fn test_complete_task_all_valid_resolutions() {
+    for (i, resolution) in ["done", "wontfix", "duplicate", "obsolete"]
+        .iter()
+        .enumerate()
+    {
+        let temp_dir = TempDir::new().unwrap();
+        setup_initialized_spool(&temp_dir);
+        let id = format!("task-{:03}", i + 1);
+        let event = format!(
+            r#"{{"v":1,"op":"create","id":"{id}","ts":"2024-01-15T10:00:00Z","by":"@tester","branch":"main","d":{{"title":"Task {i}"}}}}"#
+        );
+        write_test_events(&temp_dir, &event);
+
+        spool_cmd()
+            .current_dir(temp_dir.path())
+            .args(["complete", &id, "--resolution", resolution])
+            .assert()
+            .success()
+            .stdout(predicate::str::contains(*resolution));
+    }
+}
+
+#[test]
 fn test_complete_already_complete_errors() {
     let temp_dir = TempDir::new().unwrap();
     setup_initialized_spool(&temp_dir);
