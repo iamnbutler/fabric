@@ -31,6 +31,7 @@ fn test_cli_parse_list_defaults() {
         stream_name,
         no_stream,
         format,
+        sort,
     } = cli.command
     {
         assert_eq!(status, "open");
@@ -41,6 +42,7 @@ fn test_cli_parse_list_defaults() {
         assert!(stream_name.is_none());
         assert!(!no_stream);
         assert_eq!(format, "table");
+        assert_eq!(sort, "created");
     } else {
         panic!("Expected List command");
     }
@@ -687,5 +689,49 @@ fn test_cli_parse_stream_delete() {
         }
     } else {
         panic!("Expected Stream command");
+    }
+}
+
+#[test]
+fn test_cli_parse_list_sort_priority() {
+    let cli = Cli::parse_from(["spool", "list", "--sort", "priority"]);
+
+    if let Commands::List { sort, .. } = cli.command {
+        assert_eq!(sort, "priority");
+    } else {
+        panic!("Expected List command");
+    }
+}
+
+#[test]
+fn test_cli_parse_list_sort_title() {
+    let cli = Cli::parse_from(["spool", "list", "--sort", "title"]);
+
+    if let Commands::List { sort, .. } = cli.command {
+        assert_eq!(sort, "title");
+    } else {
+        panic!("Expected List command");
+    }
+}
+
+#[test]
+fn test_cli_parse_list_sort_updated() {
+    let cli = Cli::parse_from(["spool", "list", "--sort", "updated"]);
+
+    if let Commands::List { sort, .. } = cli.command {
+        assert_eq!(sort, "updated");
+    } else {
+        panic!("Expected List command");
+    }
+}
+
+#[test]
+fn test_cli_parse_list_sort_default_is_created() {
+    let cli = Cli::parse_from(["spool", "list"]);
+
+    if let Commands::List { sort, .. } = cli.command {
+        assert_eq!(sort, "created");
+    } else {
+        panic!("Expected List command");
     }
 }
