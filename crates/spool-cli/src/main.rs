@@ -44,6 +44,7 @@ fn main() -> Result<()> {
             stream_name,
             no_stream,
             format,
+            sort,
         } => {
             let ctx = SpoolContext::discover()?;
             let fmt = OutputFormat::from_str(&format);
@@ -57,6 +58,7 @@ fn main() -> Result<()> {
                 stream_name.as_deref(),
                 no_stream,
                 fmt,
+                &sort,
             )
         }
         Commands::Show { id, events } => {

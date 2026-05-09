@@ -70,6 +70,9 @@ pub enum Commands {
         /// Output format: table, json, or ids
         #[arg(short, long, default_value = "table")]
         format: String,
+        /// Sort order: created, priority, title, or updated (default: created)
+        #[arg(long, default_value = "created")]
+        sort: String,
     },
     /// Show details of a specific task
     Show {
@@ -222,6 +225,7 @@ pub fn list_tasks(
     stream_name: Option<&str>,
     no_stream: bool,
     format: OutputFormat,
+    sort: &str,
 ) -> Result<()> {
     let state = load_or_materialize_state(ctx)?;
 
@@ -276,8 +280,22 @@ pub fn list_tasks(
         })
         .collect();
 
-    // Sort by created date
-    tasks.sort_by_key(|t| t.created);
+    // Sort tasks
+    match sort {
+        "priority" => tasks.sort_by(|a, b| {
+            let pa = a.priority.as_deref().unwrap_or("p9");
+            let pb = b.priority.as_deref().unwrap_or("p9");
+            pa.cmp(pb).then_with(|| a.created.cmp(&b.created))
+        }),
+        "title" => tasks.sort_by(|a, b| {
+            a.title
+                .to_lowercase()
+                .cmp(&b.title.to_lowercase())
+                .then_with(|| a.created.cmp(&b.created))
+        }),
+        "updated" => tasks.sort_by_key(|t| t.updated),
+        _ => tasks.sort_by_key(|t| t.created), // "created" or any unknown value
+    }
 
     match format {
         OutputFormat::Json => {
