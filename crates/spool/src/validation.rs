@@ -8,6 +8,9 @@ use std::path::Path;
 use crate::context::SpoolContext;
 use crate::state::materialize;
 
+const VALID_PRIORITIES: &[&str] = &["p0", "p1", "p2", "p3"];
+const VALID_RESOLUTIONS: &[&str] = &["done", "wontfix", "duplicate", "obsolete"];
+
 #[derive(Debug)]
 pub struct ValidationResult {
     pub errors: Vec<String>,
@@ -223,6 +226,58 @@ fn validate_event_file(
                     line_num + 1,
                     ts
                 ));
+            }
+        }
+
+        // Validate field format values
+        let op_str = event.get("op").and_then(|v| v.as_str()).unwrap_or("");
+        if let Some(d) = event.get("d").and_then(|v| v.as_object()) {
+            // Priority: present in create/update events
+            if let Some(priority) = d.get("priority").and_then(|v| v.as_str()) {
+                if !VALID_PRIORITIES.contains(&priority) {
+                    warnings.push(format!(
+                        "{}:{}: Invalid priority '{}'. Expected one of: p0, p1, p2, p3",
+                        filename,
+                        line_num + 1,
+                        priority
+                    ));
+                }
+            }
+
+            // Assignee: present as 'd.assignee' in create events and as 'd.to' in assign events
+            if let Some(assignee) = d.get("assignee").and_then(|v| v.as_str()) {
+                if !assignee.starts_with('@') {
+                    warnings.push(format!(
+                        "{}:{}: Assignee '{}' is missing '@' prefix",
+                        filename,
+                        line_num + 1,
+                        assignee
+                    ));
+                }
+            }
+            if let Some(to) = d.get("to").and_then(|v| v.as_str()) {
+                if !to.starts_with('@') {
+                    warnings.push(format!(
+                        "{}:{}: Assignee '{}' is missing '@' prefix",
+                        filename,
+                        line_num + 1,
+                        to
+                    ));
+                }
+            }
+
+            // Resolution: present in complete events
+            if op_str == "complete" {
+                if let Some(resolution) = d.get("resolution").and_then(|v| v.as_str()) {
+                    if !VALID_RESOLUTIONS.contains(&resolution) {
+                        warnings.push(format!(
+                            "{}:{}: Invalid resolution '{}'. Expected one of: done, wontfix, duplicate, obsolete",
+                            filename,
+                            line_num + 1,
+                            resolution
+                        ));
+                    }
+                }
             }
         }
     }
