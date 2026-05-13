@@ -303,6 +303,195 @@ fn test_validation_empty_lines_ignored() {
 }
 
 #[test]
+fn test_validation_invalid_priority() {
+    let temp_dir = TempDir::new().unwrap();
+    let spool_dir = setup_spool_dir(&temp_dir);
+
+    let events = vec![json!({
+        "v": 1, "op": "create", "id": "task-001",
+        "ts": "2024-01-15T10:00:00Z", "by": "tester", "branch": "main",
+        "d": {"title": "Task", "priority": "urgent"}
+    })];
+    write_events(&spool_dir.join("events"), "2024-01-15.jsonl", &events);
+
+    let ctx = create_test_context(&spool_dir);
+    let result = spool::validation::validate(&ctx, false).unwrap();
+
+    assert!(!result.warnings.is_empty());
+    assert!(result
+        .warnings
+        .iter()
+        .any(|w| w.contains("Invalid priority") && w.contains("urgent")));
+}
+
+#[test]
+fn test_validation_valid_priorities() {
+    let temp_dir = TempDir::new().unwrap();
+    let spool_dir = setup_spool_dir(&temp_dir);
+
+    let events = vec![
+        json!({
+            "v": 1, "op": "create", "id": "task-001",
+            "ts": "2024-01-15T10:00:00Z", "by": "tester", "branch": "main",
+            "d": {"title": "P0 Task", "priority": "p0"}
+        }),
+        json!({
+            "v": 1, "op": "update", "id": "task-001",
+            "ts": "2024-01-15T11:00:00Z", "by": "tester", "branch": "main",
+            "d": {"priority": "p3"}
+        }),
+    ];
+    write_events(&spool_dir.join("events"), "2024-01-15.jsonl", &events);
+
+    let ctx = create_test_context(&spool_dir);
+    let result = spool::validation::validate(&ctx, false).unwrap();
+
+    assert!(
+        result.warnings.is_empty(),
+        "Unexpected warnings: {:?}",
+        result.warnings
+    );
+}
+
+#[test]
+fn test_validation_assignee_missing_at_prefix_in_create() {
+    let temp_dir = TempDir::new().unwrap();
+    let spool_dir = setup_spool_dir(&temp_dir);
+
+    let events = vec![json!({
+        "v": 1, "op": "create", "id": "task-001",
+        "ts": "2024-01-15T10:00:00Z", "by": "tester", "branch": "main",
+        "d": {"title": "Task", "assignee": "alice"}
+    })];
+    write_events(&spool_dir.join("events"), "2024-01-15.jsonl", &events);
+
+    let ctx = create_test_context(&spool_dir);
+    let result = spool::validation::validate(&ctx, false).unwrap();
+
+    assert!(!result.warnings.is_empty());
+    assert!(result
+        .warnings
+        .iter()
+        .any(|w| w.contains("missing '@' prefix") && w.contains("alice")));
+}
+
+#[test]
+fn test_validation_assignee_missing_at_prefix_in_assign() {
+    let temp_dir = TempDir::new().unwrap();
+    let spool_dir = setup_spool_dir(&temp_dir);
+
+    let events = vec![
+        json!({
+            "v": 1, "op": "create", "id": "task-001",
+            "ts": "2024-01-15T10:00:00Z", "by": "tester", "branch": "main",
+            "d": {"title": "Task"}
+        }),
+        json!({
+            "v": 1, "op": "assign", "id": "task-001",
+            "ts": "2024-01-15T11:00:00Z", "by": "tester", "branch": "main",
+            "d": {"to": "bob"}
+        }),
+    ];
+    write_events(&spool_dir.join("events"), "2024-01-15.jsonl", &events);
+
+    let ctx = create_test_context(&spool_dir);
+    let result = spool::validation::validate(&ctx, false).unwrap();
+
+    assert!(!result.warnings.is_empty());
+    assert!(result
+        .warnings
+        .iter()
+        .any(|w| w.contains("missing '@' prefix") && w.contains("bob")));
+}
+
+#[test]
+fn test_validation_assignee_with_at_prefix() {
+    let temp_dir = TempDir::new().unwrap();
+    let spool_dir = setup_spool_dir(&temp_dir);
+
+    let events = vec![
+        json!({
+            "v": 1, "op": "create", "id": "task-001",
+            "ts": "2024-01-15T10:00:00Z", "by": "tester", "branch": "main",
+            "d": {"title": "Task", "assignee": "@alice"}
+        }),
+        json!({
+            "v": 1, "op": "assign", "id": "task-001",
+            "ts": "2024-01-15T11:00:00Z", "by": "tester", "branch": "main",
+            "d": {"to": "@bob"}
+        }),
+    ];
+    write_events(&spool_dir.join("events"), "2024-01-15.jsonl", &events);
+
+    let ctx = create_test_context(&spool_dir);
+    let result = spool::validation::validate(&ctx, false).unwrap();
+
+    assert!(
+        result.warnings.is_empty(),
+        "Unexpected warnings: {:?}",
+        result.warnings
+    );
+}
+
+#[test]
+fn test_validation_invalid_resolution() {
+    let temp_dir = TempDir::new().unwrap();
+    let spool_dir = setup_spool_dir(&temp_dir);
+
+    let events = vec![
+        json!({
+            "v": 1, "op": "create", "id": "task-001",
+            "ts": "2024-01-15T10:00:00Z", "by": "tester", "branch": "main",
+            "d": {"title": "Task"}
+        }),
+        json!({
+            "v": 1, "op": "complete", "id": "task-001",
+            "ts": "2024-01-15T11:00:00Z", "by": "tester", "branch": "main",
+            "d": {"resolution": "fixed"}
+        }),
+    ];
+    write_events(&spool_dir.join("events"), "2024-01-15.jsonl", &events);
+
+    let ctx = create_test_context(&spool_dir);
+    let result = spool::validation::validate(&ctx, false).unwrap();
+
+    assert!(!result.warnings.is_empty());
+    assert!(result
+        .warnings
+        .iter()
+        .any(|w| w.contains("Invalid resolution") && w.contains("fixed")));
+}
+
+#[test]
+fn test_validation_valid_resolutions() {
+    for resolution in &["done", "wontfix", "duplicate", "obsolete"] {
+        let events = vec![
+            json!({
+                "v": 1, "op": "create", "id": "task-001",
+                "ts": "2024-01-15T10:00:00Z", "by": "tester", "branch": "main",
+                "d": {"title": "Task"}
+            }),
+            json!({
+                "v": 1, "op": "complete", "id": "task-001",
+                "ts": "2024-01-15T11:00:00Z", "by": "tester", "branch": "main",
+                "d": {"resolution": resolution}
+            }),
+        ];
+        let sub_dir = TempDir::new().unwrap();
+        let spool_sub = setup_spool_dir(&sub_dir);
+        write_events(&spool_sub.join("events"), "2024-01-15.jsonl", &events);
+        let ctx = create_test_context(&spool_sub);
+        let result = spool::validation::validate(&ctx, false).unwrap();
+        assert!(
+            result.warnings.is_empty(),
+            "Unexpected warnings for resolution '{}': {:?}",
+            resolution,
+            result.warnings
+        );
+    }
+}
+
+#[test]
 fn test_validation_archive_files() {
     let temp_dir = TempDir::new().unwrap();
     let spool_dir = setup_spool_dir(&temp_dir);
