@@ -507,6 +507,10 @@ pub fn add_task(
     tags: Vec<String>,
     stream: Option<&str>,
 ) -> Result<()> {
+    if title.trim().is_empty() {
+        return Err(anyhow!("Task title cannot be empty."));
+    }
+
     // If setting a stream, verify it exists
     if let Some(s) = stream {
         let state = load_or_materialize_state(ctx)?;
@@ -595,6 +599,10 @@ pub fn free_task(ctx: &SpoolContext, id: &str) -> Result<()> {
 
 /// Create a new stream
 pub fn add_stream(ctx: &SpoolContext, name: &str, description: Option<&str>) -> Result<()> {
+    if name.trim().is_empty() {
+        return Err(anyhow!("Stream name cannot be empty."));
+    }
+
     let user = get_current_user()?;
     let branch = get_current_branch()?;
 

@@ -945,3 +945,55 @@ fn test_stream_list_json_format() {
         .stdout(predicate::str::contains("\"name\":"))
         .stdout(predicate::str::contains("JSON Stream"));
 }
+
+#[test]
+fn test_add_task_empty_title_rejected() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["add", ""])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Task title cannot be empty"));
+}
+
+#[test]
+fn test_add_task_whitespace_title_rejected() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["add", "   "])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Task title cannot be empty"));
+}
+
+#[test]
+fn test_stream_add_empty_name_rejected() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["stream", "add", ""])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Stream name cannot be empty"));
+}
+
+#[test]
+fn test_stream_add_whitespace_name_rejected() {
+    let temp_dir = TempDir::new().unwrap();
+    setup_initialized_spool(&temp_dir);
+
+    spool_cmd()
+        .current_dir(temp_dir.path())
+        .args(["stream", "add", "   "])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Stream name cannot be empty"));
+}
