@@ -1,6 +1,6 @@
 {
-  "last_run": "2026-05-19",
-  "last_run_id": "26072399700",
+  "last_run": "2026-05-20",
+  "last_run_id": "26137473955",
   "monthly_activity_issue": 84,
   "monthly_activity_month": "2026-05",
   "backlog_cursor": null,
@@ -50,8 +50,8 @@
     "71": ["help wanted"]
   },
   "pr_ci_status": {
-    "note": "27 open PRs total (23 Repo Assist, 4 Maintainer). All PRs based on main SHA 5b7e3a2. PR #88 newly created 2026-05-19 (combined filter tests). Maintainer PRs #68, #69, #72 fail cargo fmt --check (need manual fix). PR #67 passes clean. PR #62 is NOT a draft — ready for review. IMPORTANT: push_to_pull_request_branch CANNOT push to maintainer PRs — tool requires '[Repo Assist]' title prefix.",
-    "checked": "2026-05-19",
+    "note": "26 open PRs total (22 Repo Assist + PR #62, 4 Maintainer). All PRs based on main SHA 5b7e3a2. Verified clean 2026-05-20. Maintainer PRs #68, #69, #72 fail cargo fmt --check (need manual fix). PR #67 passes clean. IMPORTANT: push_to_pull_request_branch CANNOT push to maintainer PRs — tool requires '[Repo Assist]' title prefix.",
+    "checked": "2026-05-20",
     "maintainer_pr_ci": {
       "67": "pass:clean",
       "68": "cargo_fmt_needed:cannot_push:commented_2026-05-07",
@@ -66,7 +66,7 @@
     "validation-extension-opportunity": "DONE — PR #86 extends validation.rs to check priority (p0-p3), assignee (@-prefix for d.assignee and d.to), resolution (done/wontfix/duplicate/obsolete). All as warnings. 7 new tests, 267 total pass.",
     "push-to-pr-title-constraint": "push_to_pull_request_branch requires PR title to start with '[Repo Assist]'. Cannot push to maintainer PRs #68/#69/#72. This was causing repeated failures on 2026-05-04/05/06 runs (all reported in issue #73).",
     "pr62-not-draft": "PR #62 (spool block/unblock) is NOT marked as draft — it is a regular open PR ready for review. Created 2026-03-10.",
-    "all-prs-on-current-main": "All PRs verified 2026-05-17 as based on main SHA 5b7e3a2. All have mergeable_state: clean.",
+    "all-prs-on-current-main": "All PRs verified 2026-05-20 as based on main SHA 5b7e3a2. All have mergeable_state: clean.",
     "cli-list-sort-gap-closed": "PR #85 adds --sort flag to spool list (priority/title/updated/created). TUI already had sort; CLI now has parity.",
     "empty-name-validation-gap": "FIXED — PR #87 (2026-05-18) adds checks in add_task() and add_stream() to reject empty/whitespace-only names with 4 new integration tests.",
     "combined-filter-tests-gap": "FIXED — PR #88 (2026-05-19) adds apply_filters_and_sort test helper + 15 combined filter tests (status+stream+search intersections, sort correctness). 94 spool-ui tests pass.",
@@ -78,16 +78,16 @@
     "task2_fix_issues": "2026-05-14",
     "task3_improvements": "2026-05-18",
     "task4_deps": "2026-05-12",
-    "task5_maintain_prs": "2026-05-17",
+    "task5_maintain_prs": "2026-05-20",
     "task6_stale_nudges": "2026-05-14",
     "task7_labels": "2026-05-15",
     "task8_release": "2026-05-15",
     "task9_welcome": "2026-05-14",
     "task10_forward": "2026-05-19",
-    "task11_monthly_summary": "2026-05-19"
+    "task11_monthly_summary": "2026-05-20"
   },
   "deps_last_checked": "2026-05-12",
   "deps_pr": 60,
   "deps_pr_branch": "repo-assist/deps-update-2026-03-05-7ddf94a021c0519c",
-  "notes": "May 2026. Run 2026-05-19: Tasks 10/11. Created PR #88: test(spool-ui): add combined filter and sort unit tests — 15 new tests (apply_filters_and_sort helper + combined status/stream/search/sort tests), closes the combined-filter-tests-gap from codebase notes. 94 spool-ui tests (up from 79), 275 workspace tests pass. Updated monthly activity issue #84. Next round-robin: task4_deps (2026-05-12), task2_fix_issues (2026-05-14), task6_stale_nudges (2026-05-14), task9_welcome (2026-05-14). Deps: next check ~2026-05-26. Do NOT try push_to_pull_request_branch on PRs #68/#69/#72 ever again."
+  "notes": "May 2026. Run 2026-05-20: Tasks 5/11. No new activity since 2026-05-19. All 26 open PRs confirmed on main SHA 5b7e3a2 (clean). Stale nudges deferred: maintainer PRs #68/#69/#72 last updated 2026-05-07 (not yet 14 days). Deps next check ~2026-05-26. Next round-robin priority: task2_fix_issues (2026-05-14), task6_stale_nudges (2026-05-14), task9_welcome (2026-05-14), task7_labels (2026-05-15). Do NOT try push_to_pull_request_branch on PRs #68/#69/#72 ever again. 26 total PRs: 23 Repo Assist, 4 Maintainer (#62 is a Repo Assist PR but not a draft)."
 }
